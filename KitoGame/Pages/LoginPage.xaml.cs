@@ -123,7 +123,7 @@ public partial class LoginPage : ContentPage
 
         if (_isRegisterMode)
         {
-            var result = _appState.RegisterUser(
+            var result = await _appState.RegisterUserAsync(
                 EntryFirstName.Text ?? string.Empty,
                 EntryLastName.Text ?? string.Empty,
                 EntryEmail.Text ?? string.Empty,

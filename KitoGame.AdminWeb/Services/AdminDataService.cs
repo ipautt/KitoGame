@@ -188,8 +188,9 @@ public class AdminDataService
 
             return await UsersCollection.Find(filter).SortByDescending(u => u.CreatedAt).Limit(100).ToListAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "ERROR EN GetUsersAsync: {Message}", ex.Message);
             return new();
         }
     }
@@ -330,8 +331,9 @@ public class AdminDataService
 
             return await PaymentsCollection.Find(filter).SortByDescending(p => p.CreatedAt).Limit(100).ToListAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "ERROR EN GetUsersAsync: {Message}", ex.Message);
             return new();
         }
     }
@@ -415,8 +417,9 @@ public class AdminDataService
                 .Limit(take)
                 .ToListAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "ERROR EN GetUsersAsync: {Message}", ex.Message);
             return new();
         }
     }
@@ -431,8 +434,9 @@ public class AdminDataService
                 .Limit(take)
                 .ToListAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "ERROR EN GetUsersAsync: {Message}", ex.Message);
             return new();
         }
     }

@@ -1,5 +1,7 @@
 using KitoGame.AdminWeb.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 

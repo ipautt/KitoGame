@@ -102,7 +102,7 @@ public class AppStateService
         NotifyStateChanged();
     }
 
-    public (bool Success, string Message) RegisterUser(
+    public async Task<(bool Success, string Message)> RegisterUserAsync(
         string firstName,
         string lastName,
         string email,
@@ -153,10 +153,27 @@ public class AppStateService
 
         AddTransaction(newUser, 5000m, TransactionType.Deposit, "Saldo inicial de bienvenida ($5.000 COP)");
         SaveDatabase();
-        _ = MongoDb.UpsertUserAsync(newUser);
+        
+        bool cloudSaved = false;
+        try
+        {
+            await MongoDb.UpsertUserAsync(newUser);
+            cloudSaved = MongoDb.IsConnected;
+        }
+        catch
+        {
+            cloudSaved = false;
+        }
         NotifyStateChanged();
 
-        return (true, $"¡Cuenta creada para {newUser.FullName} con $5.000 COP de saldo inicial listo para jugar!");
+        if (cloudSaved)
+        {
+            return (true, $"¡Cuenta creada y sincronizada con la nube para {newUser.FullName} con $5.000 COP de saldo inicial!");
+        }
+        else
+        {
+            return (true, $"¡Cuenta creada para {newUser.FullName}! (Nota: Se sincronizará con Atlas en cuanto el celular conecte al cluster).");
+        }
     }
 
     /// <summary>
@@ -181,6 +198,7 @@ public class AppStateService
             _db.LastLoggedInUserId = existingUser.Id;
             EnsureSampleIncomingChallengesForUser(existingUser);
             SaveDatabase();
+            _ = MongoDb.UpsertUserAsync(existingUser);
             NotifyStateChanged();
             return (true, $"Sesión iniciada con Google como {existingUser.DisplayName} ({existingUser.Email}).");
         }
@@ -214,6 +232,7 @@ public class AppStateService
         AddTransaction(newGoogleUser, 5000m, TransactionType.Deposit, "Bono de bienvenida (Cuenta vinculada con Google)");
         EnsureSampleIncomingChallengesForUser(newGoogleUser);
         SaveDatabase();
+        _ = MongoDb.UpsertUserAsync(newGoogleUser);
         NotifyStateChanged();
 
         return (true, $"¡Cuenta de Google vinculada con éxito para {newGoogleUser.FullName} ({newGoogleUser.Email})!");
