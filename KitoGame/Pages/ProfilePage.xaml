@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KitoGame.Pages.ProfilePage"
+             Title="Mi Perfil de Usuario"
+             BackgroundColor="#FAF5E8">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="18,20,18,36" Spacing="16" MaximumWidthRequest="500" HorizontalOptions="Fill">
+
+            <!-- Tarjeta Resumen del Jugador -->
+            <Border BackgroundColor="#FFFBEB"
+                    Stroke="#F59E0B"
+                    StrokeThickness="2"
+                    StrokeShape="RoundRectangle 18"
+                    Padding="18">
+                <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                    <Border BackgroundColor="#FFFFFF"
+                            Stroke="#F59E0B"
+                            StrokeThickness="2.5"
+                            StrokeShape="RoundRectangle 35"
+                            WidthRequest="70"
+                            HeightRequest="70"
+                            HorizontalOptions="Center">
+                        <Label x:Name="LblAvatarInitials"
+                               Text="IP"
+                               FontSize="24"
+                               FontAttributes="Bold"
+                               TextColor="#B45309"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+                    </Border>
+
+                    <Label x:Name="LblFullNameHeader"
+                           Text="Ivan Pautt"
+                           FontSize="20"
+                           FontAttributes="Bold"
+                           TextColor="#1E293B"
+                           HorizontalTextAlignment="Center" />
+
+                    <Label x:Name="LblUsernameBadge"
+                           Text="@ivan • Victorias: 0 | Derrotas: 0"
+                           FontSize="13"
+                           FontAttributes="Bold"
+                           TextColor="#64748B"
+                           HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Selector de Idioma del Usuario -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#FCD34D"
+                    StrokeThickness="1.5"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="14">
+                <VerticalStackLayout Spacing="8">
+                    <Label x:Name="LblSelectLanguage"
+                           Text="🌐 Idioma / Language:"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="#92400E" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Button x:Name="BtnLangEs"
+                                Grid.Column="0"
+                                Text="🇪🇸 Español"
+                                Clicked="OnLangEsClicked"
+                                BackgroundColor="#F59E0B"
+                                TextColor="#1E293B"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="36"
+                                CornerRadius="8" />
+                        <Button x:Name="BtnLangEn"
+                                Grid.Column="1"
+                                Text="🇺🇸 English"
+                                Clicked="OnLangEnClicked"
+                                BackgroundColor="#FFFBEB"
+                                TextColor="#78350F"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="36"
+                                CornerRadius="8" />
+                        <Button x:Name="BtnLangPt"
+                                Grid.Column="2"
+                                Text="🇧🇷 Português"
+                                Clicked="OnLangPtClicked"
+                                BackgroundColor="#FFFBEB"
+                                TextColor="#78350F"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="36"
+                                CornerRadius="8" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Formulario de Edición de Datos Personales -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#CBD5E1"
+                    StrokeThickness="1.5"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="18">
+                <VerticalStackLayout Spacing="12">
+                    <Label x:Name="LblEditHeader"
+                           Text="✏️ EDITAR INFORMACIÓN DEL USUARIO"
+                           FontSize="14"
+                           FontAttributes="Bold"
+                           TextColor="#1D4ED8" />
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label x:Name="LblFirstName" Text="Nombres *" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                        <Border BackgroundColor="#FFFDF7" Stroke="#CBD5E1" StrokeShape="RoundRectangle 10" Padding="6,0">
+                            <Entry x:Name="EntryFirstName"
+                                   Placeholder="Ej: Ivan"
+                                   TextColor="#1E293B"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label x:Name="LblLastName" Text="Apellidos *" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                        <Border BackgroundColor="#FFFDF7" Stroke="#CBD5E1" StrokeShape="RoundRectangle 10" Padding="6,0">
+                            <Entry x:Name="EntryLastName"
+                                   Placeholder="Ej: Pautt"
+                                   TextColor="#1E293B"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label x:Name="LblEmail" Text="Correo Electrónico *" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                        <Border BackgroundColor="#FFFDF7" Stroke="#CBD5E1" StrokeShape="RoundRectangle 10" Padding="6,0">
+                            <Entry x:Name="EntryEmail"
+                                   Placeholder="correo@ejemplo.com"
+                                   Keyboard="Email"
+                                   TextColor="#1E293B"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label x:Name="LblPhone" Text="Teléfono / Celular (Opcional)" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                        <Border BackgroundColor="#FFFDF7" Stroke="#CBD5E1" StrokeShape="RoundRectangle 10" Padding="6,0">
+                            <Entry x:Name="EntryPhone"
+                                   Placeholder="Ej: 3001234567"
+                                   Keyboard="Telephone"
+                                   TextColor="#1E293B"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label x:Name="LblNewPass" Text="Nueva Contraseña (dejar en blanco para mantener la actual)" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                        <Border BackgroundColor="#FFFDF7" Stroke="#CBD5E1" StrokeShape="RoundRectangle 10" Padding="6,0">
+                            <Entry x:Name="EntryNewPassword"
+                                   Placeholder="••••••"
+                                   IsPassword="True"
+                                   TextColor="#1E293B"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Button x:Name="BtnSaveProfile"
+                            Text="💾 Guardar Cambios del Perfil"
+                            Clicked="OnSaveProfileClicked"
+                            BackgroundColor="#10B981"
+                            TextColor="#FFFFFF"
+                            FontAttributes="Bold"
+                            HeightRequest="46"
+                            CornerRadius="12" />
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+

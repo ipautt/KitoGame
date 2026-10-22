@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KitoGame.Pages.LoginPage"
+             Title="KitoGame - Acceso"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#FAF5E8">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="22,24,22,36" Spacing="16" MaximumWidthRequest="480" HorizontalOptions="Fill">
+
+            <!-- Selector de Idioma en Vivo (Español / English / Português) -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#FCD34D"
+                    StrokeThickness="1.5"
+                    StrokeShape="RoundRectangle 14"
+                    Padding="10">
+                <VerticalStackLayout Spacing="6">
+                    <Label x:Name="LblSelectLanguage"
+                           Text="🌐 Idioma / Language:"
+                           FontSize="11"
+                           FontAttributes="Bold"
+                           TextColor="#92400E"
+                           HorizontalTextAlignment="Center" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Button x:Name="BtnLangEs"
+                                Grid.Column="0"
+                                Text="🇪🇸 Español"
+                                Clicked="OnLangEsClicked"
+                                BackgroundColor="#F59E0B"
+                                TextColor="#1E293B"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="36"
+                                CornerRadius="8" />
+                        <Button x:Name="BtnLangEn"
+                                Grid.Column="1"
+                                Text="🇺🇸 English"
+                                Clicked="OnLangEnClicked"
+                                BackgroundColor="#FFFBEB"
+                                TextColor="#78350F"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="36"
+                                CornerRadius="8" />
+                        <Button x:Name="BtnLangPt"
+                                Grid.Column="2"
+                                Text="🇧🇷 Português"
+                                Clicked="OnLangPtClicked"
+                                BackgroundColor="#FFFBEB"
+                                TextColor="#78350F"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="36"
+                                CornerRadius="8" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Tarjeta de Bienvenida e Ícono KitoGame -->
+            <Border BackgroundColor="#FFFBEB"
+                    Stroke="#F59E0B"
+                    StrokeThickness="2"
+                    StrokeShape="RoundRectangle 22"
+                    Padding="18,16">
+                <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                    <Border BackgroundColor="#1E293B"
+                            Stroke="#F59E0B"
+                            StrokeThickness="3"
+                            StrokeShape="RoundRectangle 28"
+                            HeightRequest="116"
+                            WidthRequest="116"
+                            Padding="0"
+                            HorizontalOptions="Center">
+                        <Image Source="kito_logo.png"
+                               Aspect="AspectFill"
+                               HeightRequest="116"
+                               WidthRequest="116" />
+                    </Border>
+                    <Label Text="KITO GAME"
+                           FontSize="28"
+                           FontAttributes="Bold"
+                           TextColor="#B45309"
+                           HorizontalOptions="Center" />
+                    <Label x:Name="LblAppSubtitle"
+                           Text="Plataforma de Retos 1v1 • Damas y Ajedrez"
+                           FontSize="13"
+                           FontAttributes="Bold"
+                           TextColor="#475569"
+                           HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Selector Login / Registro -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button x:Name="BtnTabLogin"
+                        Grid.Column="0"
+                        Text="Iniciar Sesión"
+                        Clicked="OnShowLoginClicked"
+                        BackgroundColor="#F59E0B"
+                        TextColor="#1E293B"
+                        FontAttributes="Bold"
+                        HeightRequest="44"
+                        CornerRadius="12" />
+                <Button x:Name="BtnTabRegister"
+                        Grid.Column="1"
+                        Text="Registrar Usuario"
+                        Clicked="OnShowRegisterClicked"
+                        BackgroundColor="#FFFFFF"
+                        TextColor="#475569"
+                        BorderColor="#FCD34D"
+                        BorderWidth="1.5"
+                        FontAttributes="Bold"
+                        HeightRequest="44"
+                        CornerRadius="12" />
+            </Grid>
+
+            <!-- Tarjeta del Formulario -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#FCD34D"
+                    StrokeThickness="1.5"
+                    StrokeShape="RoundRectangle 18"
+                    Padding="20">
+                <VerticalStackLayout Spacing="12">
+                    <Label x:Name="LblFormTitle"
+                           Text="Ingresa a tu cuenta"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="#1E293B" />
+
+                    <!-- Campos exclusivos de Registro: Nombres, Apellidos, Correo, Teléfono -->
+                    <VerticalStackLayout x:Name="RegisterFieldsContainer" Spacing="12" IsVisible="False">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label x:Name="LblFirstName" Text="Nombres *" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                                <Border BackgroundColor="#FFFDF7" Stroke="#E2E8F0" StrokeShape="RoundRectangle 10" Padding="6,0">
+                                    <Entry x:Name="EntryFirstName"
+                                           Placeholder="Ej: Ivan"
+                                           PlaceholderColor="#94A3B8"
+                                           TextColor="#1E293B"
+                                           BackgroundColor="Transparent" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                <Label x:Name="LblLastName" Text="Apellidos *" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                                <Border BackgroundColor="#FFFDF7" Stroke="#E2E8F0" StrokeShape="RoundRectangle 10" Padding="6,0">
+                                    <Entry x:Name="EntryLastName"
+                                           Placeholder="Ej: Pautt"
+                                           PlaceholderColor="#94A3B8"
+                                           TextColor="#1E293B"
+                                           BackgroundColor="Transparent" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label x:Name="LblEmail" Text="Correo Electrónico *" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                            <Border BackgroundColor="#FFFDF7" Stroke="#E2E8F0" StrokeShape="RoundRectangle 10" Padding="6,0">
+                                <Entry x:Name="EntryEmail"
+                                       Placeholder="correo@ejemplo.com"
+                                       Keyboard="Email"
+                                       PlaceholderColor="#94A3B8"
+                                       TextColor="#1E293B"
+                                       BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label x:Name="LblPhone" Text="Teléfono / Celular (Opcional)" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                            <Border BackgroundColor="#FFFDF7" Stroke="#E2E8F0" StrokeShape="RoundRectangle 10" Padding="6,0">
+                                <Entry x:Name="EntryPhone"
+                                       Placeholder="Ej: 3001234567"
+                                       Keyboard="Telephone"
+                                       PlaceholderColor="#94A3B8"
+                                       TextColor="#1E293B"
+                                       BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label x:Name="LblUsernameField" Text="Usuario o Correo Electrónico" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                        <Border BackgroundColor="#FFFDF7" Stroke="#FCD34D" StrokeShape="RoundRectangle 10" Padding="6,0">
+                            <Entry x:Name="EntryUsername"
+                                   Text="ivan"
+                                   Placeholder="Ej: ivan o ivan@kitogame.com"
+                                   PlaceholderColor="#94A3B8"
+                                   TextColor="#1E293B"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label x:Name="LblPassword" Text="Contraseña" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
+                        <Border BackgroundColor="#FFFDF7" Stroke="#FCD34D" StrokeShape="RoundRectangle 10" Padding="6,0">
+                            <Entry x:Name="EntryPassword"
+                                   Text="1234"
+                                   Placeholder="••••••"
+                                   IsPassword="True"
+                                   PlaceholderColor="#94A3B8"
+                                   TextColor="#1E293B"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Label x:Name="LblFeedback"
+                           Text=""
+                           FontSize="13"
+                           FontAttributes="Bold"
+                           TextColor="#DC2626"
+                           IsVisible="False" />
+
+                    <Button x:Name="BtnSubmit"
+                            Text="Iniciar Sesión"
+                            Clicked="OnSubmitClicked"
+                            BackgroundColor="#10B981"
+                            TextColor="#FFFFFF"
+                            FontAttributes="Bold"
+                            FontSize="15"
+                            HeightRequest="48"
+                            CornerRadius="12" />
+
+                    <!-- Separador O -->
+                    <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="10" Margin="0,4">
+                        <BoxView Grid.Column="0" HeightRequest="1" Color="#E2E8F0" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="O ingresa rápidamente con" FontSize="11" TextColor="#64748B" />
+                        <BoxView Grid.Column="2" HeightRequest="1" Color="#E2E8F0" VerticalOptions="Center" />
+                    </Grid>
+
+                    <!-- Botón de Inicio de Sesión con Google -->
+                    <Button x:Name="BtnGoogleSignIn"
+                            Text="🌐 Continuar con Cuenta de Google"
+                            Clicked="OnGoogleSignInClicked"
+                            BackgroundColor="#FFFBEB"
+                            TextColor="#1E293B"
+                            BorderColor="#F59E0B"
+                            BorderWidth="1.5"
+                            FontAttributes="Bold"
+                            HeightRequest="46"
+                            CornerRadius="12" />
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+

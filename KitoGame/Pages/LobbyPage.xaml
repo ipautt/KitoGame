@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KitoGame.Pages.LobbyPage"
+             Title="Lobby - KitoGame"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#FAF5E8">
+
+    <ScrollView x:Name="MainScrollView">
+        <VerticalStackLayout Padding="16,18,16,36" Spacing="12" MaximumWidthRequest="600" HorizontalOptions="Fill">
+
+            <!-- Barra Superior Fija: Perfil, Idioma, Saldos y Accesos -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#F59E0B"
+                    StrokeThickness="2"
+                    StrokeShape="RoundRectangle 18"
+                    Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                        <Border Grid.Column="0"
+                                BackgroundColor="#1E293B"
+                                Stroke="#F59E0B"
+                                StrokeThickness="2"
+                                StrokeShape="RoundRectangle 14"
+                                HeightRequest="50"
+                                WidthRequest="50"
+                                Padding="0"
+                                VerticalOptions="Center">
+                            <Image Source="kito_logo.png"
+                                   Aspect="AspectFill"
+                                   HeightRequest="50"
+                                   WidthRequest="50" />
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label x:Name="LblWelcomeUser"
+                                   Text="Ivan Pautt"
+                                   FontSize="17"
+                                   FontAttributes="Bold"
+                                   TextColor="#1E293B" />
+                            <Label x:Name="LblUserEmailAndStats"
+                                   Text="ivan@kitogame.com • @ivan"
+                                   FontSize="11"
+                                   TextColor="#64748B" />
+                            <Label x:Name="LblCommissionInfo"
+                                   Text="Comisión actual: 10%"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="#059669" />
+                        </VerticalStackLayout>
+
+                        <Button x:Name="BtnLogout"
+                                Grid.Column="2"
+                                Text="Salir"
+                                Clicked="OnLogoutClicked"
+                                BackgroundColor="#FEE2E2"
+                                TextColor="#B91C1C"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="34"
+                                CornerRadius="8" />
+                    </Grid>
+
+                    <!-- Selector Rápido de Idioma -->
+                    <Grid ColumnDefinitions="Auto,*,*,*" ColumnSpacing="6" VerticalOptions="Center">
+                        <Label Grid.Column="0" Text="🌐" FontSize="14" VerticalOptions="Center" Margin="0,0,4,0" />
+                        <Button x:Name="BtnLangEs" Grid.Column="1" Text="🇪🇸 ES" Clicked="OnLangEsClicked" BackgroundColor="#F59E0B" TextColor="#1E293B" FontAttributes="Bold" FontSize="11" HeightRequest="30" CornerRadius="8" />
+                        <Button x:Name="BtnLangEn" Grid.Column="2" Text="🇺🇸 EN" Clicked="OnLangEnClicked" BackgroundColor="#FFFBEB" TextColor="#78350F" FontAttributes="Bold" FontSize="11" HeightRequest="30" CornerRadius="8" />
+                        <Button x:Name="BtnLangPt" Grid.Column="3" Text="🇧🇷 PT" Clicked="OnLangPtClicked" BackgroundColor="#FFFBEB" TextColor="#78350F" FontAttributes="Bold" FontSize="11" HeightRequest="30" CornerRadius="8" />
+                    </Grid>
+
+                    <!-- Tarjetas de Saldo -->
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Border Grid.Column="0" BackgroundColor="#ECFDF5" Stroke="#10B981" StrokeThickness="1.5" StrokeShape="RoundRectangle 12" Padding="10">
+                            <VerticalStackLayout Spacing="2">
+                                <Label x:Name="LblAvailTitle" Text="SALDO DISPONIBLE" FontSize="10" TextColor="#065F46" FontAttributes="Bold" />
+                                <Label x:Name="LblAvailableBalance" Text="$5.000 COP" FontSize="17" FontAttributes="Bold" TextColor="#047857" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Border Grid.Column="1" BackgroundColor="#FFFBEB" Stroke="#F59E0B" StrokeThickness="1.5" StrokeShape="RoundRectangle 12" Padding="10">
+                            <VerticalStackLayout Spacing="2">
+                                <Label x:Name="LblLockedTitle" Text="EN CUSTODIA (PARTIDA)" FontSize="10" TextColor="#92400E" FontAttributes="Bold" />
+                                <Label x:Name="LblLockedBalance" Text="$0 COP" FontSize="17" FontAttributes="Bold" TextColor="#D97706" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <!-- Botones de Perfil, Billetera y Admin -->
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Button x:Name="BtnProfile" Grid.Column="0" Text="👤 Mi Perfil" Clicked="OnOpenProfileClicked" BackgroundColor="#FFFBEB" TextColor="#1E293B" BorderColor="#F59E0B" BorderWidth="1.5" FontAttributes="Bold" FontSize="12" HeightRequest="38" CornerRadius="10" />
+                        <Button x:Name="BtnWallet" Grid.Column="1" Text="💳 Billetera" Clicked="OnOpenWalletClicked" BackgroundColor="#10B981" TextColor="White" FontAttributes="Bold" FontSize="12" HeightRequest="38" CornerRadius="10" />
+                        <Button x:Name="BtnAdmin" Grid.Column="2" Text="⚙️ Comisión" Clicked="OnOpenAdminClicked" BackgroundColor="#F59E0B" TextColor="#1E293B" FontAttributes="Bold" FontSize="12" HeightRequest="38" CornerRadius="10" />
+                    </Grid>
+
+                    <!-- Indicador de Conexión en la Nube MongoDB Atlas -->
+                    <Border BackgroundColor="#FFFDF7" Stroke="#E2E8F0" StrokeShape="RoundRectangle 10" Padding="10,6">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                            <Label x:Name="LblMongoStatus"
+                                   Grid.Column="0"
+                                   Text="☁️ MongoDB Atlas: kitogamesdb.od2ekmj.mongodb.net"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="#047857"
+                                   VerticalOptions="Center" />
+                            <Button x:Name="BtnSyncCloud"
+                                    Grid.Column="1"
+                                    Text="🔄 Sincronizar"
+                                    Clicked="OnSyncMongoClicked"
+                                    BackgroundColor="#ECFDF5"
+                                    TextColor="#047857"
+                                    BorderColor="#10B981"
+                                    BorderWidth="1"
+                                    FontSize="10"
+                                    FontAttributes="Bold"
+                                    HeightRequest="28"
+                                    Padding="8,0"
+                                    CornerRadius="8" />
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="Toca cualquier recuadro para abrirlo o recogerlo cuando desees:"
+                   FontSize="12"
+                   FontAttributes="Bold"
+                   TextColor="#78350F"
+                   Margin="4,2,0,0" />
+
+            <!-- ========================================================================= -->
+            <!-- RECUADRO PLEGABLE 1: JUEGOS DISPONIBLES (Recogido por defecto)            -->
+            <!-- ========================================================================= -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#FCD34D" StrokeThickness="1.5" StrokeShape="RoundRectangle 14" Padding="14">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnToggleSection1Tapped" />
+                        </Grid.GestureRecognizers>
+                        <Label x:Name="LblSection1Games"
+                               Grid.Column="0"
+                               Text="🎮 1. JUEGOS DISPONIBLES"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="#1E293B"
+                               VerticalOptions="Center" />
+                        <Button x:Name="BtnToggleSec1"
+                                Grid.Column="1"
+                                Text="▼ Abrir"
+                                Clicked="OnToggleSection1Tapped"
+                                BackgroundColor="#FFFBEB"
+                                TextColor="#B45309"
+                                BorderColor="#FCD34D"
+                                BorderWidth="1"
+                                FontAttributes="Bold"
+                                FontSize="11"
+                                HeightRequest="30"
+                                Padding="10,0"
+                                CornerRadius="8" />
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="Section1Content" Spacing="10" IsVisible="False">
+                        <VerticalStackLayout x:Name="GameCatalogContainer" Spacing="10" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ========================================================================= -->
+            <!-- RECUADRO PLEGABLE 2: CREAR PARTIDA Y ELEGIR CONTRINCANTE                  -->
+            <!-- ========================================================================= -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#10B981" StrokeThickness="1.5" StrokeShape="RoundRectangle 14" Padding="14">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnToggleSection2Tapped" />
+                        </Grid.GestureRecognizers>
+                        <Label x:Name="LblSelectedGameHeader"
+                               Grid.Column="0"
+                               Text="⚔️ 2. CREAR PARTIDA EN: DAMAS CLÁSICAS"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="#047857"
+                               VerticalOptions="Center" />
+                        <Button x:Name="BtnToggleSec2"
+                                Grid.Column="1"
+                                Text="▼ Abrir"
+                                Clicked="OnToggleSection2Tapped"
+                                BackgroundColor="#ECFDF5"
+                                TextColor="#047857"
+                                BorderColor="#10B981"
+                                BorderWidth="1"
+                                FontAttributes="Bold"
+                                FontSize="11"
+                                HeightRequest="30"
+                                Padding="10,0"
+                                CornerRadius="8" />
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="Section2Content" Spacing="12" IsVisible="False">
+
+                        <!-- Tarjeta Visual Amigable de Duelo: TÚ vs CONTRINCANTE -->
+                        <Border BackgroundColor="#FFFBEB"
+                                Stroke="#F59E0B"
+                                StrokeThickness="1.5"
+                                StrokeShape="RoundRectangle 14"
+                                Padding="12">
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="🤝 EMPAREJAMIENTO 1v1 (ELIGE TU CONTRINCANTE)"
+                                       FontSize="11"
+                                       FontAttributes="Bold"
+                                       TextColor="#B45309"
+                                       HorizontalTextAlignment="Center" />
+
+                                <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8" VerticalOptions="Center">
+                                    <!-- Tarjeta Jugador Local (Tú) -->
+                                    <Border Grid.Column="0"
+                                            BackgroundColor="#FFFFFF"
+                                            Stroke="#10B981"
+                                            StrokeThickness="1.5"
+                                            StrokeShape="RoundRectangle 12"
+                                            Padding="8">
+                                        <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+                                            <Border BackgroundColor="#ECFDF5"
+                                                    Stroke="#10B981"
+                                                    StrokeShape="RoundRectangle 20"
+                                                    WidthRequest="38"
+                                                    HeightRequest="38"
+                                                    HorizontalOptions="Center">
+                                                <Label Text="👑" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                                            </Border>
+                                            <Label x:Name="LblDuelMyName"
+                                                   Text="Tú"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   TextColor="#1E293B"
+                                                   HorizontalTextAlignment="Center" />
+                                            <Label Text="🟢 Listo para jugar"
+                                                   FontSize="10"
+                                                   TextColor="#059669"
+                                                   HorizontalTextAlignment="Center" />
+                                        </VerticalStackLayout>
+                                    </Border>
+
+                                    <!-- Insignia VS Central -->
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="#F59E0B"
+                                            Stroke="#B45309"
+                                            StrokeThickness="1.5"
+                                            StrokeShape="RoundRectangle 18"
+                                            WidthRequest="36"
+                                            HeightRequest="36"
+                                            VerticalOptions="Center">
+                                        <Label Text="VS"
+                                               FontSize="12"
+                                               FontAttributes="Bold"
+                                               TextColor="#1E293B"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center" />
+                                    </Border>
+
+                                    <!-- Tarjeta Contrincante Seleccionado -->
+                                    <Border Grid.Column="2"
+                                            BackgroundColor="#FFFFFF"
+                                            Stroke="#8B5CF6"
+                                            StrokeThickness="1.5"
+                                            StrokeShape="RoundRectangle 12"
+                                            Padding="8">
+                                        <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+                                            <Border BackgroundColor="#F3E8FF"
+                                                    Stroke="#8B5CF6"
+                                                    StrokeShape="RoundRectangle 20"
+                                                    WidthRequest="38"
+                                                    HeightRequest="38"
+                                                    HorizontalOptions="Center">
+                                                <Label x:Name="LblDuelRivalAvatar" Text="🌍" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                                            </Border>
+                                            <Label x:Name="LblDuelRivalName"
+                                                   Text="Reto Abierto"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   TextColor="#1E293B"
+                                                   HorizontalTextAlignment="Center" />
+                                            <Label x:Name="LblDuelRivalStatus"
+                                                   Text="🟢 Cualquier jugador"
+                                                   FontSize="10"
+                                                   TextColor="#6D28D9"
+                                                   HorizontalTextAlignment="Center" />
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Selector de Jugadores Reales Registrados en MongoDB Atlas -->
+                                <VerticalStackLayout Spacing="6">
+                                    <Label Text="Selecciona contra quién deseas jugar:"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           TextColor="#78350F" />
+                                    <Border BackgroundColor="#FFFFFF" Stroke="#FCD34D" StrokeShape="RoundRectangle 10" Padding="6,0">
+                                        <Picker x:Name="PickerRealOpponent"
+                                                Title="Elige un jugador registrado o Reto Abierto"
+                                                SelectedIndexChanged="OnOpponentPickerChanged"
+                                                TextColor="#1E293B"
+                                                FontAttributes="Bold"
+                                                BackgroundColor="Transparent" />
+                                    </Border>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Label x:Name="LblBetPrompt"
+                               Text="Selecciona o escribe el monto de tu apuesta (COP):"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="#334155" />
+
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                            <Button Text="$1.000" Clicked="OnQuickBet1000Clicked" BackgroundColor="#ECFDF5" TextColor="#047857" BorderColor="#10B981" BorderWidth="1.5" FontAttributes="Bold" CornerRadius="8" />
+                            <Button Text="$2.000" Clicked="OnQuickBet2000Clicked" BackgroundColor="#ECFDF5" TextColor="#047857" BorderColor="#10B981" BorderWidth="1.5" FontAttributes="Bold" CornerRadius="8" />
+                            <Button Text="$5.000" Clicked="OnQuickBet5000Clicked" BackgroundColor="#ECFDF5" TextColor="#047857" BorderColor="#10B981" BorderWidth="1.5" FontAttributes="Bold" CornerRadius="8" />
+                        </Grid>
+
+                        <Border BackgroundColor="#FFFDF7" Stroke="#FCD34D" StrokeShape="RoundRectangle 10" Padding="8,0">
+                            <Entry x:Name="EntryBetAmount"
+                                   Text="1000"
+                                   Keyboard="Numeric"
+                                   TextChanged="OnBetAmountTextChanged"
+                                   TextColor="#1E293B"
+                                   FontAttributes="Bold"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+
+                        <Border BackgroundColor="#FFFBEB" Stroke="#F59E0B" StrokeShape="RoundRectangle 10" Padding="10">
+                            <Label x:Name="LblPotPreview"
+                                   Text="Tú pones $1.000 + Contrincante $1.000 = Pozo $2.000 COP"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="#B45309"
+                                   HorizontalTextAlignment="Center" />
+                        </Border>
+
+                        <Button x:Name="BtnStartMatchNow"
+                                Text="🔥 Apostar e Iniciar Partida Ahora"
+                                Clicked="OnCreateChallengeClicked"
+                                BackgroundColor="#10B981"
+                                TextColor="#FFFFFF"
+                                FontAttributes="Bold"
+                                HeightRequest="46"
+                                CornerRadius="12" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ========================================================================= -->
+            <!-- RECUADRO PLEGABLE 3: RETOS RECIBIDOS Y EN CURSO (Recogido por defecto)    -->
+            <!-- ========================================================================= -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#3B82F6" StrokeThickness="1.5" StrokeShape="RoundRectangle 14" Padding="14">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnToggleSection3Tapped" />
+                        </Grid.GestureRecognizers>
+                        <Label x:Name="LblSection3Active"
+                               Grid.Column="0"
+                               Text="🏆 3. RETOS RECIBIDOS Y PARTIDAS EN CURSO"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="#1D4ED8"
+                               VerticalOptions="Center" />
+                        <Button x:Name="BtnToggleSec3"
+                                Grid.Column="1"
+                                Text="▼ Abrir"
+                                Clicked="OnToggleSection3Tapped"
+                                BackgroundColor="#EFF6FF"
+                                TextColor="#1D4ED8"
+                                BorderColor="#93C5FD"
+                                BorderWidth="1"
+                                FontAttributes="Bold"
+                                FontSize="11"
+                                HeightRequest="30"
+                                Padding="10,0"
+                                CornerRadius="8" />
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="Section3Content" Spacing="10" IsVisible="False">
+                        <VerticalStackLayout x:Name="ActiveChallengesContainer" Spacing="10" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ========================================================================= -->
+            <!-- RECUADRO PLEGABLE 4: NOTIFICACIONES DEL CELULAR (Recogido por defecto)    -->
+            <!-- ========================================================================= -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#F59E0B" StrokeThickness="1.5" StrokeShape="RoundRectangle 14" Padding="14">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnToggleSection4Tapped" />
+                        </Grid.GestureRecognizers>
+                        <Label Grid.Column="0"
+                               Text="🔔 4. NOTIFICACIONES AL CELULAR"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="#B45309"
+                               VerticalOptions="Center" />
+                        <Border x:Name="BadgeUnreadCount"
+                                Grid.Column="1"
+                                BackgroundColor="#EF4444"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 10"
+                                Padding="8,2"
+                                VerticalOptions="Center">
+                            <Label x:Name="LblUnreadCount"
+                                   Text="2"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="White" />
+                        </Border>
+                        <Button x:Name="BtnToggleSec4"
+                                Grid.Column="2"
+                                Text="▼ Abrir"
+                                Clicked="OnToggleSection4Tapped"
+                                BackgroundColor="#FFFBEB"
+                                TextColor="#B45309"
+                                BorderColor="#FCD34D"
+                                BorderWidth="1"
+                                FontAttributes="Bold"
+                                FontSize="11"
+                                HeightRequest="30"
+                                Padding="10,0"
+                                CornerRadius="8" />
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="Section4Content" Spacing="10" IsVisible="False">
+                        <Label Text="Las notificaciones salen directamente en la barra superior de tu celular Android:"
+                               FontSize="11"
+                               TextColor="#475569" />
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <Button Grid.Column="0"
+                                    Text="📲 Enviar Reto al Celular"
+                                    Clicked="OnSimulateDirectChallengeNotificationClicked"
+                                    BackgroundColor="#FFFBEB"
+                                    TextColor="#B45309"
+                                    BorderColor="#F59E0B"
+                                    BorderWidth="1.5"
+                                    FontSize="11"
+                                    FontAttributes="Bold"
+                                    HeightRequest="36"
+                                    CornerRadius="8" />
+
+                            <Button Grid.Column="1"
+                                    Text="📲 Enviar 'Buscan Rival'"
+                                    Clicked="OnSimulateOpenSearchNotificationClicked"
+                                    BackgroundColor="#EFF6FF"
+                                    TextColor="#1D4ED8"
+                                    BorderColor="#3B82F6"
+                                    BorderWidth="1.5"
+                                    FontSize="11"
+                                    FontAttributes="Bold"
+                                    HeightRequest="36"
+                                    CornerRadius="8" />
+                        </Grid>
+
+                        <Button Text="Marcar todas como leídas"
+                                Clicked="OnMarkNotificationsReadClicked"
+                                BackgroundColor="#F1F5F9"
+                                TextColor="#475569"
+                                FontAttributes="Bold"
+                                FontSize="11"
+                                HeightRequest="32"
+                                CornerRadius="8" />
+
+                        <VerticalStackLayout x:Name="NotificationsListContainer" Spacing="8" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ========================================================================= -->
+            <!-- RECUADRO PLEGABLE 5: HISTORIAL DE PARTIDAS (Recogido por defecto)         -->
+            <!-- ========================================================================= -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#CBD5E1" StrokeThickness="1.5" StrokeShape="RoundRectangle 14" Padding="14">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnToggleSection5Tapped" />
+                        </Grid.GestureRecognizers>
+                        <Label x:Name="LblSection4History"
+                               Grid.Column="0"
+                               Text="📜 5. HISTORIAL DE PARTIDAS FINALIZADAS"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="#334155"
+                               VerticalOptions="Center" />
+                        <Button x:Name="BtnToggleSec5"
+                                Grid.Column="1"
+                                Text="▼ Abrir"
+                                Clicked="OnToggleSection5Tapped"
+                                BackgroundColor="#F8FAFC"
+                                TextColor="#334155"
+                                BorderColor="#CBD5E1"
+                                BorderWidth="1"
+                                FontAttributes="Bold"
+                                FontSize="11"
+                                HeightRequest="30"
+                                Padding="10,0"
+                                CornerRadius="8" />
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="Section5Content" Spacing="8" IsVisible="False">
+                        <VerticalStackLayout x:Name="CompletedChallengesContainer" Spacing="8" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+

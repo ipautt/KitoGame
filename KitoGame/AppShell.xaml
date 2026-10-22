@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="KitoGame.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:KitoGame.Pages"
+    Shell.FlyoutBehavior="Disabled"
+    Shell.BackgroundColor="#FFFBEB"
+    Shell.TitleColor="#1E293B"
+    Shell.ForegroundColor="#D97706"
+    Title="KitoGame">
+
+    <ShellContent
+        Title="Acceso"
+        ContentTemplate="{DataTemplate pages:LoginPage}"
+        Route="LoginPage" />
+
+    <ShellContent
+        Title="Lobby"
+        ContentTemplate="{DataTemplate pages:LobbyPage}"
+        Route="LobbyPage" />
+
+</Shell>
+
