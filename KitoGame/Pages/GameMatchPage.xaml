@@ -223,8 +223,9 @@
                         CornerRadius="10" />
             </Grid>
 
-            <!-- Botón de Prueba Rápida de Victoria (Solo para validar liquidación de apuesta rápido) -->
-            <Button Text="🏆 Simular Victoria Inmediata (Probar Cobro del Premio)"
+            <!-- Botón de Prueba Rápida de Victoria (Solo visible para el Administrador) -->
+            <Button x:Name="BtnAdminSimulateWin"
+                    Text="🏆 Simular Victoria Inmediata (Solo Admin)"
                     Clicked="OnSimulateWinP1Clicked"
                     BackgroundColor="#ECFDF5"
                     TextColor="#047857"
@@ -233,7 +234,8 @@
                     FontSize="12"
                     FontAttributes="Bold"
                     HeightRequest="38"
-                    CornerRadius="10" />
+                    CornerRadius="10"
+                    IsVisible="False" />
 
             <!-- Registro de Movimientos -->
             <Border BackgroundColor="#FFFFFF"

@@ -59,8 +59,10 @@ public partial class ProfilePage : ContentPage
 
     private static void HighlightLangButton(Button btn, bool active)
     {
-        btn.BackgroundColor = active ? Color.FromArgb("#F59E0B") : Color.FromArgb("#FFFBEB");
-        btn.TextColor = active ? Color.FromArgb("#1E293B") : Color.FromArgb("#78350F");
+        btn.BackgroundColor = active ? Color.FromArgb("#F59E0B") : Color.FromArgb("#FFFFFF");
+        btn.TextColor = active ? Color.FromArgb("#1E293B") : Color.FromArgb("#475569");
+        btn.BorderColor = active ? Color.FromArgb("#D97706") : Color.FromArgb("#CBD5E1");
+        btn.BorderWidth = active ? 2 : 1.5;
     }
 
     private void LoadUserData()

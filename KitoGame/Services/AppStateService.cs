@@ -131,6 +131,8 @@ public class AppStateService
         if (_db.UsersTable.Any(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
             return (false, "Ese correo electrónico ya está registrado.");
 
+        bool isMasterAdmin = IsMasterAdminAccount(username, email);
+
         var newUser = new User
         {
             FirstName = firstName,
@@ -142,7 +144,7 @@ public class AppStateService
             AuthProvider = "Local",
             Balance = 5000m,
             LockedBalance = 0m,
-            IsAdmin = true
+            IsAdmin = isMasterAdmin
         };
 
         _db.UsersTable.Add(newUser);
@@ -174,6 +176,7 @@ public class AppStateService
         if (existingUser != null)
         {
             existingUser.AuthProvider = "Google";
+            existingUser.IsAdmin = IsMasterAdminAccount(existingUser.Username, existingUser.Email);
             CurrentUser = existingUser;
             _db.LastLoggedInUserId = existingUser.Id;
             EnsureSampleIncomingChallengesForUser(existingUser);
@@ -201,7 +204,7 @@ public class AppStateService
             AuthProvider = "Google",
             Balance = 5000m,
             LockedBalance = 0m,
-            IsAdmin = true
+            IsAdmin = IsMasterAdminAccount(baseUsername, googleEmail)
         };
 
         _db.UsersTable.Add(newGoogleUser);
@@ -928,8 +931,31 @@ public class AppStateService
         SaveDatabase();
     }
 
+    public static bool IsMasterAdminAccount(string? username, string? email)
+    {
+        if (!string.IsNullOrWhiteSpace(username) &&
+            username.Trim().Equals("ivan", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            string e = email.Trim();
+            if (e.Equals("ivan@kitogame.com", StringComparison.OrdinalIgnoreCase) ||
+                e.Equals("ivan.pautt@gmail.com", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
     private void EnsureSampleIncomingChallengesForUser(User user)
     {
+        user.IsAdmin = IsMasterAdminAccount(user.Username, user.Email);
+        foreach (var u in _db.UsersTable)
+        {
+            u.IsAdmin = IsMasterAdminAccount(u.Username, u.Email);
+        }
+
         // Limpiar retos simulados antiguos para que solo existan usuarios y retos reales
         _db.MatchChallengesTable.RemoveAll(c => c.CreatorId == "RIVAL-ONLINE" && !c.IsPracticeBot);
         _db.NotificationsTable.RemoveAll(n => n.Message.Contains("@Carlos_M") || n.Message.Contains("@Andres_G"));
@@ -992,9 +1018,23 @@ public class AppStateService
                 var remoteUsers = await MongoDb.Users.Find(_ => true).ToListAsync();
                 foreach (var ru in remoteUsers)
                 {
+                    bool shouldBeAdmin = IsMasterAdminAccount(ru.Username, ru.Email);
+                    bool changed = false;
+
+                    if (ru.IsAdmin != shouldBeAdmin)
+                    {
+                        ru.IsAdmin = shouldBeAdmin;
+                        changed = true;
+                    }
+
                     if (ru.Balance == 0m && ru.LockedBalance == 0m && ru.Wins == 0 && ru.Losses == 0)
                     {
                         ru.Balance = 5000m;
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
                         await MongoDb.UpsertUserAsync(ru);
                     }
 

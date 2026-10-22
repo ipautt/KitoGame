@@ -208,8 +208,9 @@ public partial class LobbyPage : ContentPage
 
     private static void HighlightLangButton(Button btn, bool active)
     {
-        btn.BackgroundColor = active ? Color.FromArgb("#F59E0B") : Color.FromArgb("#FFFBEB");
-        btn.TextColor = active ? Color.FromArgb("#1E293B") : Color.FromArgb("#78350F");
+        btn.BackgroundColor = active ? Color.FromArgb("#F59E0B") : Color.FromArgb("#FFFFFF");
+        btn.TextColor = active ? Color.FromArgb("#1E293B") : Color.FromArgb("#334155");
+        btn.BorderColor = active ? Color.FromArgb("#D97706") : Color.FromArgb("#CBD5E1");
     }
 
     private string GetLocalizedGameName(string gameId) =>
@@ -246,6 +247,11 @@ public partial class LobbyPage : ContentPage
         BtnWallet.Text = loc.T("BtnWallet");
         BtnAdmin.Text = loc.T("BtnAdmin");
         BtnLogout.Text = loc.T("BtnLogout");
+
+        // Visibilidad exclusiva de herramientas de Administrador (Comisión, MongoDB Atlas, Pruebas)
+        bool isAdmin = user.IsAdmin;
+        AdminOnlyToolbar.IsVisible = isAdmin;
+        AdminSimulateNotifGrid.IsVisible = isAdmin;
 
         decimal comm = _appState.CommissionPercentage;
         LblCommissionInfo.Text = comm == 0
@@ -740,6 +746,9 @@ public partial class LobbyPage : ContentPage
 
     private async void OnOpenAdminClicked(object? sender, EventArgs e)
     {
+        if (_appState.CurrentUser?.IsAdmin != true)
+            return;
+
         await Navigation.PushAsync(new AdminPage(_appState));
     }
 

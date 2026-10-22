@@ -222,6 +222,7 @@ public partial class GameMatchPage : ContentPage
         string unitLabel = _challenge.GameId == "checkers" ? "fichas" : "piezas";
         LblPlayer1Count.Text = $"{_engine.Player1PiecesCount} {unitLabel}";
         LblPlayer2Count.Text = $"{_engine.Player2PiecesCount} {unitLabel}";
+        BtnAdminSimulateWin.IsVisible = _appState.CurrentUser?.IsAdmin == true;
 
         if (_challenge.Status == MatchStatus.WaitingForOpponent)
         {
