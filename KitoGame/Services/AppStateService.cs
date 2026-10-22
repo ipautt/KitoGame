@@ -230,6 +230,12 @@ public class AppStateService
         if (user == null)
             return (false, "Credenciales incorrectas. Verifica tu usuario/correo y contraseña.");
 
+        if (user.IsBanned)
+        {
+            string reason = !string.IsNullOrWhiteSpace(user.BanReason) ? $" Motivo: {user.BanReason}" : "";
+            return (false, $"🚫 Tu cuenta ha sido suspendida/restringida por el administrador.{reason}");
+        }
+
         CurrentUser = user;
         _db.LastLoggedInUserId = user.Id;
         EnsureSampleIncomingChallengesForUser(user);
@@ -438,6 +444,95 @@ public class AppStateService
         SaveDatabase();
         NotifyStateChanged();
         return (true, $"Comisión del sistema actualizada al {_db.CommissionPercentage:0.#}%.");
+    }
+
+    public (bool Success, string Message) ResetUserPassword(string userId, string newPassword)
+    {
+        if (CurrentUser?.IsAdmin != true)
+            return (false, "Acción permitida solo para el administrador.");
+
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 4)
+            return (false, "La nueva contraseña debe tener al menos 4 caracteres.");
+
+        var user = _db.UsersTable.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+            return (false, "Usuario no encontrado.");
+
+        user.Password = newPassword;
+        SaveDatabase();
+        NotifyStateChanged();
+        _ = MongoDb.UpsertUserAsync(user);
+
+        return (true, $"Contraseña actualizada para @{user.Username}.");
+    }
+
+    public (bool Success, string Message) ToggleBanUser(string userId, string reason)
+    {
+        if (CurrentUser?.IsAdmin != true)
+            return (false, "Acción permitida solo para el administrador.");
+
+        var user = _db.UsersTable.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+            return (false, "Usuario no encontrado.");
+
+        if (user.IsAdmin)
+            return (false, "No se puede suspender una cuenta de administrador.");
+
+        user.IsBanned = !user.IsBanned;
+        user.BanReason = user.IsBanned ? reason : null;
+        SaveDatabase();
+        NotifyStateChanged();
+        _ = MongoDb.UpsertUserAsync(user);
+
+        return (true, user.IsBanned ? $"🚫 Usuario @{user.Username} suspendido." : $"✅ Usuario @{user.Username} reactivado.");
+    }
+
+    public (bool Success, string Message) DeleteUser(string userId)
+    {
+        if (CurrentUser?.IsAdmin != true)
+            return (false, "Acción permitida solo para el administrador.");
+
+        var user = _db.UsersTable.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+            return (false, "Usuario no encontrado.");
+
+        if (user.IsAdmin)
+            return (false, "No se puede eliminar la cuenta principal de administrador.");
+
+        _db.UsersTable.Remove(user);
+        SaveDatabase();
+        NotifyStateChanged();
+        _ = MongoDb.DeleteUserAsync(userId);
+
+        return (true, $"Usuario @{user.Username} eliminado permanentemente.");
+    }
+
+    public (bool Success, string Message) AdjustUserBalance(string userId, decimal amountDelta, string reason)
+    {
+        if (CurrentUser?.IsAdmin != true)
+            return (false, "Acción permitida solo para el administrador.");
+
+        var user = _db.UsersTable.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+            return (false, "Usuario no encontrado.");
+
+        decimal oldBalance = user.Balance;
+        user.Balance = Math.Max(0, user.Balance + amountDelta);
+
+        _db.WalletTransactionsTable.Insert(0, new WalletTransaction
+        {
+            UserId = user.Id,
+            Username = user.Username,
+            Amount = amountDelta,
+            Type = TransactionType.PlatformCommission,
+            Description = $"Ajuste admin por @{CurrentUser.Username}: {reason}"
+        });
+
+        SaveDatabase();
+        NotifyStateChanged();
+        _ = MongoDb.UpsertUserAsync(user);
+
+        return (true, $"Saldo de @{user.Username} ajustado de ${oldBalance:N0} a ${user.Balance:N0} COP.");
     }
 
     public IReadOnlyList<User> GetRealOpponents()

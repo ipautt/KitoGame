@@ -98,6 +98,19 @@ public class MongoDbService
         }
     }
 
+    public async Task DeleteUserAsync(string userId)
+    {
+        if (Users == null) return;
+        try
+        {
+            await Users.DeleteOneAsync(u => u.Id == userId);
+            IsConnected = true;
+        }
+        catch
+        {
+        }
+    }
+
     public async Task<MatchChallenge?> GetChallengeByIdAsync(string challengeId)
     {
         if (MatchChallenges == null) return null;
