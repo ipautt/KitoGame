@@ -1,0 +1,153 @@
+@page
+@model KitoGame.AdminWeb.Pages.SettingsModel
+@{
+    ViewData["Title"] = "Control Total e Infraestructura";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1 text-white"><i class="fa-solid fa-server text-warning me-2"></i> Control Total e Infraestructura</h2>
+        <p class="text-secondary small mb-0">Cambio dinámico de parámetros de Base de Datos (IP, Host, Contraseña) y reglas globales de KitoGame.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Formulario de Conexión a Base de Datos -->
+    <div class="col-lg-7">
+        <div class="card-custom mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-white mb-0">
+                    <i class="fa-solid fa-database text-warning me-2"></i> Parámetros de la Base de Datos
+                </h5>
+                @if (Model.IsConnected)
+                {
+                    <span class="badge bg-success bg-opacity-25 text-success border border-success px-2 py-1">
+                        <i class="fa-solid fa-circle-check me-1"></i> Conexión Activa
+                    </span>
+                }
+                else
+                {
+                    <span class="badge bg-danger bg-opacity-25 text-danger border border-danger px-2 py-1">
+                        <i class="fa-solid fa-circle-xmark me-1"></i> Sin Conexión
+                    </span>
+                }
+            </div>
+
+            <p class="small text-secondary mb-4">
+                Puedes cambiar aquí el cluster de MongoDB Atlas, o apuntar a tu propio servidor local/VPS (IP y puerto). El sistema validará la conexión con un <span class="text-light fw-bold">ping</span> antes de aplicar los cambios.
+            </p>
+
+            <form method="post" asp-page-handler="SaveDatabase">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-light">Host o Dirección IP del Cluster</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-network-wired"></i></span>
+                        <input type="text" asp-for="Config.DatabaseHost" class="form-control bg-dark border-secondary text-white" placeholder="Ej: kitogamesdb.od2ekmj.mongodb.net o 192.168.1.100:27017" required />
+                    </div>
+                    <div class="small text-muted mt-1">Nombre de dominio del cluster en MongoDB Atlas o IP del servidor.</div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-light">Usuario de Base de Datos</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-user"></i></span>
+                            <input type="text" asp-for="Config.DatabaseUser" class="form-control bg-dark border-secondary text-white" placeholder="Ej: ivdapafi_db_user" required />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-light">Contraseña de Base de Datos</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-key"></i></span>
+                            <input type="password" asp-for="Config.DatabasePassword" class="form-control bg-dark border-secondary text-white" placeholder="••••••••" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-light">Nombre de la Base de Datos</label>
+                        <input type="text" asp-for="Config.DatabaseName" class="form-control bg-dark border-secondary text-white" placeholder="KitoGameDb" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-light">Tipo de Protocolo</label>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" asp-for="Config.IsSrv" id="chkSrv">
+                            <label class="form-check-label small text-light" for="chkSrv">Usar protocolo DNS SRV (mongodb+srv:// para Atlas)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-light">Cadena de Conexión Personalizada (Opcional - Avanzado)</label>
+                    <textarea asp-for="Config.CustomConnectionString" class="form-control bg-dark border-secondary text-white" rows="2" placeholder="Dejar en blanco para autogenerar con los campos superiores"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-gold w-100 py-2">
+                    <i class="fa-solid fa-plug-circle-check me-2"></i> Probar Conexión y Guardar Parámetros de BD
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reglas Globales y Mantenimiento -->
+    <div class="col-lg-5">
+        <div class="card-custom mb-4">
+            <h5 class="fw-bold text-white mb-3">
+                <i class="fa-solid fa-sliders text-warning me-2"></i> Reglas Globales de KitoGame
+            </h5>
+
+            <form method="post" asp-page-handler="SaveRules">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-light">Porcentaje de Comisión de la Casa (%)</label>
+                    <div class="input-group">
+                        <input type="number" step="0.5" min="0" max="50" asp-for="Config.CommissionPercentage" class="form-control bg-dark border-secondary text-white" required />
+                        <span class="input-group-text bg-dark border-secondary text-secondary">%</span>
+                    </div>
+                    <div class="small text-muted mt-1">Porcentaje descontado del pozo al ganador de cada partida.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-light">Bono de Bienvenida para Nuevos Usuarios ($ COP)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-secondary">$</span>
+                        <input type="number" step="500" min="0" max="50000" asp-for="Config.WelcomeBonusAmount" class="form-control bg-dark border-secondary text-white" required />
+                        <span class="input-group-text bg-dark border-secondary text-secondary">COP</span>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold text-light">Apuesta Mínima</label>
+                        <input type="number" step="500" asp-for="Config.MinBetAmount" class="form-control bg-dark border-secondary text-white" required />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold text-light">Apuesta Máxima</label>
+                        <input type="number" step="10000" asp-for="Config.MaxBetAmount" class="form-control bg-dark border-secondary text-white" required />
+                    </div>
+                </div>
+
+                <div class="border-top border-secondary pt-3 mb-3">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" asp-for="Config.MaintenanceMode" id="chkMaint">
+                        <label class="form-check-label fw-bold text-warning" for="chkMaint">Modo Mantenimiento Global</label>
+                    </div>
+                    <div class="small text-muted mb-2">Si se activa, los jugadores en la app móvil verán un aviso y no podrán iniciar partidas.</div>
+                    <input type="text" asp-for="Config.MaintenanceMessage" class="form-control bg-dark border-secondary text-white" placeholder="Mensaje para los usuarios..." />
+                </div>
+
+                <button type="submit" class="btn btn-secondary-custom w-100 py-2">
+                    <i class="fa-solid fa-floppy-disk me-2"></i> Guardar Reglas de Plataforma
+                </button>
+            </form>
+        </div>
+
+        <!-- Información de Diagnóstico -->
+        <div class="card-custom">
+            <h6 class="fw-bold text-white mb-2"><i class="fa-solid fa-circle-info text-info me-2"></i> Diagnóstico de Conexión</h6>
+            <div class="small text-secondary mb-1">Estado: <span class="text-white">@Model.ConnectionStatusMessage</span></div>
+            <div class="small text-secondary mb-1">Última actualización: <span class="text-white">@Model.Config.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</span></div>
+            <div class="small text-secondary">Operador maestro: <span class="text-warning">@Model.Config.UpdatedBy</span></div>
+        </div>
+    </div>
+</div>

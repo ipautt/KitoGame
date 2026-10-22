@@ -31,3 +31,7 @@ bld/
 # Keystores and local secrets
 *.keystore
 *.jks
+DOCUMENTACION_PRIVADA_KITOGAME.md
+admin_db_config.json
+
+

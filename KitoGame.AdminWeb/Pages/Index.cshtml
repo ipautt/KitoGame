@@ -1,0 +1,193 @@
+@page
+@model KitoGame.AdminWeb.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dashboard Ejecutivo";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1 text-white"><i class="fa-solid fa-chart-pie text-warning me-2"></i> Tablero de Control Maestro</h2>
+        <p class="text-secondary small mb-0">Monitoreo en tiempo real de jugadores, partidas, ingresos de la casa e infraestructura.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/Index" class="btn btn-sm btn-secondary-custom"><i class="fa-solid fa-arrows-rotate me-1"></i> Actualizar Métricas</a>
+        <a href="/Settings" class="btn btn-sm btn-gold"><i class="fa-solid fa-gear me-1"></i> Configurar Sistema</a>
+    </div>
+</div>
+
+<!-- Tarjetas de Métricas Principales (KPIs) -->
+<div class="row g-3 mb-4">
+    <!-- Ingresos del Día -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card-custom h-100" style="border-left: 4px solid #10B981;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-secondary small text-uppercase fw-bold">Ingresos Hoy (Comisión)</span>
+                <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-2 py-1"><i class="fa-solid fa-sack-dollar"></i></span>
+            </div>
+            <h3 class="fw-bold text-white mb-1">$@Model.Stats.TodayCommissionIncome.ToString("N0") COP</h3>
+            <div class="small text-muted">Comisión de la casa cobrada hoy</div>
+        </div>
+    </div>
+
+    <!-- Usuarios Online / Conectados -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card-custom h-100" style="border-left: 4px solid #3B82F6;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-secondary small text-uppercase fw-bold">Usuarios en Línea</span>
+                <span class="badge bg-primary bg-opacity-25 text-primary rounded-pill px-2 py-1"><i class="fa-solid fa-wifi"></i></span>
+            </div>
+            <h3 class="fw-bold text-white mb-1">@Model.Stats.OnlineUsers <span class="fs-6 text-secondary fw-normal">/ @Model.Stats.TotalUsers reg.</span></h3>
+            <div class="small text-muted">Actividad en los últimos 15 min</div>
+        </div>
+    </div>
+
+    <!-- Partidas de Hoy -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card-custom h-100" style="border-left: 4px solid #F59E0B;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-secondary small text-uppercase fw-bold">Partidas Hoy</span>
+                <span class="badge bg-warning bg-opacity-25 text-warning rounded-pill px-2 py-1"><i class="fa-solid fa-chess-board"></i></span>
+            </div>
+            <h3 class="fw-bold text-white mb-1">@Model.Stats.TodayMatches</h3>
+            <div class="small text-muted">Damas y Ajedrez en curso o terminadas</div>
+        </div>
+    </div>
+
+    <!-- Errores / Pagos Pendientes -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card-custom h-100" style="border-left: 4px solid @(Model.Stats.PendingPaymentsCount > 0 ? "#EF4444" : "#64748B");">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-secondary small text-uppercase fw-bold">Pagos por Validar / Errores</span>
+                <span class="badge @(Model.Stats.PendingPaymentsCount > 0 ? "bg-danger text-white" : "bg-secondary text-light") rounded-pill px-2 py-1">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </span>
+            </div>
+            <h3 class="fw-bold @(Model.Stats.PendingPaymentsCount > 0 ? "text-danger" : "text-white") mb-1">
+                @Model.Stats.PendingPaymentsCount <span class="fs-6 text-secondary fw-normal">pendientes</span>
+            </h3>
+            <div class="small text-muted">
+                <a href="/Payments" class="text-decoration-none text-info">Ver bandeja de pagos &rarr;</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tablas Rápidas: Últimos Usuarios y Últimos Pagos -->
+<div class="row g-4">
+    <!-- Últimos Usuarios Registrados -->
+    <div class="col-lg-7">
+        <div class="card-custom">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-users text-warning me-2"></i> Jugadores Recientes</h5>
+                <a href="/Users" class="btn btn-sm btn-outline-warning">Ver Todos los Usuarios</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>Jugador</th>
+                            <th>Saldo</th>
+                            <th>Partidas</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.RecentUsers.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-center text-muted py-3">No hay usuarios registrados aún.</td></tr>
+                        }
+                        @foreach (var user in Model.RecentUsers)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-white">@user.DisplayName</div>
+                                    <div class="small text-secondary">@@@user.Username • @user.Email</div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-success">$@user.Balance.ToString("N0")</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark border border-secondary text-light">W: @user.Wins | L: @user.Losses</span>
+                                </td>
+                                <td>
+                                    @if (user.IsBanned)
+                                    {
+                                        <span class="badge bg-danger">Bloqueado</span>
+                                    }
+                                    else if (user.IsOnline)
+                                    {
+                                        <span class="badge bg-success">🟢 Online</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Desconectado</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a href="/Users?search=@user.Username" class="btn btn-sm btn-secondary-custom py-1 px-2" title="Administrar"><i class="fa-solid fa-user-pen"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagos Pendientes y Transacciones Recientes -->
+    <div class="col-lg-5">
+        <div class="card-custom">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-file-invoice-dollar text-success me-2"></i> Pagos Recientes</h5>
+                <a href="/Payments" class="btn btn-sm btn-outline-info">Bandeja Completa</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>Ref</th>
+                            <th>Monto</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.RecentPayments.Count == 0)
+                        {
+                            <tr><td colspan="3" class="text-center text-muted py-3">No hay solicitudes de pago registradas.</td></tr>
+                        }
+                        @foreach (var pay in Model.RecentPayments)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-white">#@pay.ReferenceCode</div>
+                                    <div class="small text-secondary">@pay.UserFullName</div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-warning">$@pay.Amount.ToString("N0")</div>
+                                    <div class="small text-muted">@pay.PaymentMethod</div>
+                                </td>
+                                <td>
+                                    @if (pay.Status == KitoGame.Shared.Models.PaymentStatus.Confirmed)
+                                    {
+                                        <span class="badge bg-success">Confirmado</span>
+                                    }
+                                    else if (pay.Status == KitoGame.Shared.Models.PaymentStatus.Pending)
+                                    {
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Rechazado</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

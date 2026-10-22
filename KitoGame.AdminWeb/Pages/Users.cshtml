@@ -1,0 +1,209 @@
+@page
+@model KitoGame.AdminWeb.Pages.UsersModel
+@{
+    ViewData["Title"] = "Gestión Total de Usuarios";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1 text-white"><i class="fa-solid fa-users-gear text-warning me-2"></i> Gestión Total de Usuarios</h2>
+        <p class="text-secondary small mb-0">Control de contraseñas, saldos, estados de cuenta, suspensiones y eliminación de registros.</p>
+    </div>
+</div>
+
+<!-- Barra de Búsqueda y Filtros -->
+<div class="card-custom mb-4">
+    <form method="get" class="row g-2 align-items-center">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                <input type="text" name="search" value="@Model.Search" class="form-control bg-dark border-secondary text-white" placeholder="Buscar por usuario, nombre o correo..." />
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select name="onlyBanned" class="form-select bg-dark border-secondary text-white">
+                <option value="">Todos los estados</option>
+                <option value="false" selected="@(Model.OnlyBanned == false)">Solo Activos</option>
+                <option value="true" selected="@(Model.OnlyBanned == true)">Solo Bloqueados</option>
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-gold w-100"><i class="fa-solid fa-filter me-1"></i> Filtrar</button>
+            <a href="/Users" class="btn btn-secondary-custom"><i class="fa-solid fa-rotate-left"></i></a>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de Usuarios -->
+<div class="card-custom">
+    <div class="table-responsive">
+        <table class="table table-custom mb-0">
+            <thead>
+                <tr>
+                    <th>Usuario / Jugador</th>
+                    <th>Contacto</th>
+                    <th>Saldo Disponible</th>
+                    <th>Retiro Inscrito</th>
+                    <th>Rol / Estado</th>
+                    <th class="text-end">Acciones de Control</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Users.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-user-slash fs-3 d-block mb-2"></i>
+                            No se encontraron usuarios con el criterio de búsqueda.
+                        </td>
+                    </tr>
+                }
+                @foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div style="width: 38px; height: 38px; border-radius: 10px; background: @(user.IsAdmin ? "#D97706" : "#334155"); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                                    @(user.FirstName.Length > 0 ? user.FirstName[..1] : user.Username[..1])
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-white">@user.DisplayName</div>
+                                    <div class="small text-secondary">@@@user.Username</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small text-white"><i class="fa-solid fa-envelope text-secondary me-1"></i> @user.Email</div>
+                            <div class="small text-secondary"><i class="fa-solid fa-phone text-secondary me-1"></i> @(string.IsNullOrEmpty(user.Phone) ? "Sin teléfono" : user.Phone)</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-success fs-6">$@user.Balance.ToString("N0") COP</div>
+                            @if (user.LockedBalance > 0)
+                            {
+                                <div class="small text-warning">En juego: $@user.LockedBalance.ToString("N0")</div>
+                            }
+                        </td>
+                        <td>
+                            <div class="small text-light">@user.PayoutAccountSummary</div>
+                        </td>
+                        <td>
+                            @if (user.IsBanned)
+                            {
+                                <span class="badge bg-danger">🚫 Bloqueado</span>
+                                @if (!string.IsNullOrEmpty(user.BanReason))
+                                {
+                                    <div class="small text-danger" style="font-size: 11px;">@user.BanReason</div>
+                                }
+                            }
+                            else if (user.IsOnline)
+                            {
+                                <span class="badge bg-success">🟢 Conectado</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Desconectado</span>
+                            }
+
+                            @if (user.IsAdmin)
+                            {
+                                <span class="badge bg-warning text-dark fw-bold ms-1">Admin</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <!-- Botón Reset Password -->
+                                <button type="button" class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#modalPassword_@user.Id" title="Restablecer Contraseña">
+                                    <i class="fa-solid fa-key text-warning"></i>
+                                </button>
+
+                                <!-- Botón Ajustar Saldo -->
+                                <button type="button" class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#modalBalance_@user.Id" title="Ajustar Saldo">
+                                    <i class="fa-solid fa-coins text-success"></i>
+                                </button>
+
+                                <!-- Botón Bloquear / Reactivar -->
+                                <form method="post" asp-page-handler="ToggleBan" class="d-inline">
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <input type="hidden" name="reason" value="Acción administrativa desde el panel" />
+                                    <button type="submit" class="btn btn-secondary-custom" title="@(user.IsBanned ? "Desbloquear" : "Bloquear")" onclick="return confirm('¿Seguro que deseas @(user.IsBanned ? "desbloquear" : "bloquear") a este usuario?');">
+                                        <i class="fa-solid @(user.IsBanned ? "fa-user-check text-success" : "fa-user-slash text-danger")"></i>
+                                    </button>
+                                </form>
+
+                                @if (!user.IsAdmin)
+                                {
+                                    <!-- Botón Eliminar -->
+                                    <form method="post" asp-page-handler="DeleteUser" class="d-inline">
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button type="submit" class="btn btn-secondary-custom text-danger" title="Eliminar Usuario" onclick="return confirm('¿PELIGRO: Eliminar permanentemente al usuario @user.Username?');">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+
+                            <!-- Modal Reset Password -->
+                            <div class="modal fade text-start" id="modalPassword_@user.Id" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content card-custom text-white">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title"><i class="fa-solid fa-key text-warning me-2"></i> Reiniciar Contraseña: @user.Username</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="post" asp-page-handler="ResetPassword">
+                                            <div class="modal-body">
+                                                <input type="hidden" name="userId" value="@user.Id" />
+                                                <div class="mb-3">
+                                                    <label class="form-label small text-secondary">Nueva Contraseña para el Jugador</label>
+                                                    <input type="text" name="newPassword" class="form-control bg-dark border-secondary text-white" placeholder="Ej: kito2026" required />
+                                                </div>
+                                                <div class="small text-muted">El cambio tendrá efecto inmediato en la app móvil del usuario.</div>
+                                            </div>
+                                            <div class="modal-footer border-secondary">
+                                                <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-gold">Guardar Nueva Contraseña</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal Ajuste de Saldo -->
+                            <div class="modal fade text-start" id="modalBalance_@user.Id" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content card-custom text-white">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title"><i class="fa-solid fa-coins text-success me-2"></i> Ajustar Saldo: @user.Username</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="post" asp-page-handler="AdjustBalance">
+                                            <div class="modal-body">
+                                                <input type="hidden" name="userId" value="@user.Id" />
+                                                <div class="mb-2">
+                                                    <label class="form-label small text-secondary">Saldo Actual: <strong class="text-success">$@user.Balance.ToString("N0") COP</strong></label>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label small text-secondary">Monto a Sumar o Restar (ej: 10000 o -5000)</label>
+                                                    <input type="number" step="1000" name="amountDelta" class="form-control bg-dark border-secondary text-white" placeholder="Ej: 5000" required />
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label small text-secondary">Motivo del Ajuste (Auditoría)</label>
+                                                    <input type="text" name="reason" class="form-control bg-dark border-secondary text-white" placeholder="Ej: Corrección por reclamo de recarga" required />
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer border-secondary">
+                                                <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-success">Aplicar Ajuste de Saldo</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

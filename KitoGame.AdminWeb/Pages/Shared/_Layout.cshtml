@@ -1,0 +1,215 @@
+@inject KitoGame.AdminWeb.Services.AdminDataService DataService
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - KitoGame Backoffice</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        :root {
+            --bg-main: #0B1120;
+            --bg-card: #1E293B;
+            --border-card: #334155;
+            --accent-gold: #F59E0B;
+            --accent-emerald: #10B981;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+        }
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+        .navbar-custom {
+            background-color: #0F172A;
+            border-bottom: 1.5px solid #1E293B;
+            padding: 12px 24px;
+        }
+        .nav-link-custom {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-link-custom:hover, .nav-link-custom.active {
+            color: #FFFFFF;
+            background-color: #1E293B;
+        }
+        .nav-link-custom.active {
+            color: var(--accent-gold);
+            border-bottom: 2px solid var(--accent-gold);
+        }
+        .card-custom {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            padding: 20px;
+        }
+        .badge-live-pulse {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-live-pulse::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background-color: #10B981;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #10B981;
+        }
+        .table-custom {
+            color: var(--text-primary);
+            --bs-table-bg: transparent;
+            --bs-table-border-color: #334155;
+        }
+        .table-custom thead th {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 700;
+            border-bottom: 2px solid #334155;
+            padding: 12px 14px;
+        }
+        .table-custom tbody td {
+            padding: 14px;
+            vertical-align: middle;
+            border-bottom: 1px solid #1E293B;
+        }
+        .btn-gold {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            color: #0F172A;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            transition: all 0.2s;
+        }
+        .btn-gold:hover {
+            color: #FFFFFF;
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+        }
+        .btn-secondary-custom {
+            background-color: #334155;
+            color: #F8FAFC;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 8px 16px;
+        }
+        .btn-secondary-custom:hover {
+            background-color: #475569;
+            color: #FFFFFF;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-custom">
+            <div class="container-fluid">
+                <a class="navbar-brand text-white fw-bold d-flex align-items-center gap-2" href="/Index">
+                    <span style="background: #F59E0B; color: #0F172A; width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px;">
+                        <i class="fa-solid fa-crown"></i>
+                    </span>
+                    <span>KitoGame <span class="badge bg-warning text-dark fw-bold" style="font-size: 10px;">CONTROL TOTAL</span></span>
+                </a>
+
+                <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-3 gap-1">
+                        <li class="nav-item">
+                            <a class="nav-link-custom" href="/Index"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link-custom" href="/Users"><i class="fa-solid fa-users"></i> Usuarios</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link-custom" href="/Payments"><i class="fa-solid fa-money-bill-wave"></i> Pagos y Errores</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link-custom" href="/Settings"><i class="fa-solid fa-database"></i> Base de Datos & Config</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link-custom" href="/Audit"><i class="fa-solid fa-shield-halved"></i> Bitácora</a>
+                        </li>
+                    </ul>
+
+                    <div class="d-flex align-items-center gap-3">
+                        @if (DataService.IsConnected)
+                        {
+                            <span class="badge-live-pulse" title="Conectado a @DataService.CurrentConfig.DatabaseHost">
+                                Atlas Online
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger text-white py-1 px-2" style="font-size: 11px;">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Atlas Desconectado
+                            </span>
+                        }
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-secondary-custom dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                                <i class="fa-solid fa-user-shield text-warning"></i>
+                                <span>@(User.Identity?.Name ?? "Ivan Pautt")</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                                <li><a class="dropdown-item" href="/Settings"><i class="fa-solid fa-gear me-2"></i> Configuración</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="post" action="/Logout" class="m-0">
+                                        <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-right-from-bracket me-2"></i> Cerrar Sesión</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container-fluid px-4 py-4">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert" style="background-color: #064E3B; border-color: #059669; color: #A7F3D0;">
+                <i class="fa-solid fa-circle-check me-2"></i> @TempData["SuccessMessage"]
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show rounded-3" role="alert" style="background-color: #7F1D1D; border-color: #DC2626; color: #FECACA;">
+                <i class="fa-solid fa-circle-xmark me-2"></i> @TempData["ErrorMessage"]
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @RenderBody()
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

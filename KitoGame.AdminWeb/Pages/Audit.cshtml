@@ -1,0 +1,53 @@
+@page
+@model KitoGame.AdminWeb.Pages.AuditModel
+@{
+    ViewData["Title"] = "Bitácora de Auditoría";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1 text-white"><i class="fa-solid fa-shield-halved text-warning me-2"></i> Bitácora de Auditoría</h2>
+        <p class="text-secondary small mb-0">Registro histórico inmutable de acciones realizadas por el operador maestro.</p>
+    </div>
+</div>
+
+<div class="card-custom">
+    <div class="table-responsive">
+        <table class="table table-custom mb-0">
+            <thead>
+                <tr>
+                    <th>Fecha y Hora</th>
+                    <th>Operador</th>
+                    <th>Acción</th>
+                    <th>Entidad Afectada</th>
+                    <th>Detalles</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Logs.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-shield-check fs-3 text-secondary d-block mb-2"></i>
+                            Aún no se han registrado eventos de auditoría.
+                        </td>
+                    </tr>
+                }
+                @foreach (var log in Model.Logs)
+                {
+                    <tr>
+                        <td class="text-white small">@log.FormattedDate</td>
+                        <td>
+                            <span class="badge bg-warning text-dark fw-bold">@@@log.AdminUsername</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-dark border border-secondary text-info">@log.Action</span>
+                        </td>
+                        <td class="text-light small fw-bold">@log.TargetEntity</td>
+                        <td class="text-secondary small">@log.Details</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

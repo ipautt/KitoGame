@@ -1,0 +1,147 @@
+@page
+@model KitoGame.AdminWeb.Pages.PaymentsModel
+@{
+    ViewData["Title"] = "Pagos y Resolución de Errores";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1 text-white"><i class="fa-solid fa-money-bill-transfer text-success me-2"></i> Pagos y Errores de Transacción</h2>
+        <p class="text-secondary small mb-0">Auditoría de recargas entrantes, comprobantes y resolución de pagos fallidos.</p>
+    </div>
+</div>
+
+<!-- Filtros por Estado -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    <a href="/Payments" class="btn btn-sm @(Model.StatusFilter == null ? "btn-gold" : "btn-secondary-custom")">
+        Todos (@Model.AllCount)
+    </a>
+    <a href="/Payments?status=0" class="btn btn-sm @(Model.StatusFilter == KitoGame.Shared.Models.PaymentStatus.Pending ? "btn-warning text-dark fw-bold" : "btn-secondary-custom")">
+        <i class="fa-solid fa-clock me-1"></i> Pendientes de Confirmación (@Model.PendingCount)
+    </a>
+    <a href="/Payments?status=1" class="btn btn-sm @(Model.StatusFilter == KitoGame.Shared.Models.PaymentStatus.Confirmed ? "btn-success fw-bold" : "btn-secondary-custom")">
+        <i class="fa-solid fa-check me-1"></i> Confirmados (@Model.ConfirmedCount)
+    </a>
+    <a href="/Payments?status=2" class="btn btn-sm @(Model.StatusFilter == KitoGame.Shared.Models.PaymentStatus.Rejected ? "btn-danger fw-bold" : "btn-secondary-custom")">
+        <i class="fa-solid fa-triangle-exclamation me-1"></i> Errores / Rechazados (@Model.RejectedCount)
+    </a>
+</div>
+
+<!-- Tabla de Pagos -->
+<div class="card-custom">
+    <div class="table-responsive">
+        <table class="table table-custom mb-0">
+            <thead>
+                <tr>
+                    <th>Referencia</th>
+                    <th>Jugador</th>
+                    <th>Monto Recarga</th>
+                    <th>Método</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Payments.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-check-circle fs-3 text-success d-block mb-2"></i>
+                            No hay transacciones en esta bandeja.
+                        </td>
+                    </tr>
+                }
+                @foreach (var pay in Model.Payments)
+                {
+                    <tr style="@(pay.Status == KitoGame.Shared.Models.PaymentStatus.Rejected ? "background-color: rgba(239, 68, 68, 0.05);" : "")">
+                        <td>
+                            <div class="fw-bold text-white">#@pay.ReferenceCode</div>
+                            <div class="small text-secondary">ID: @pay.Id[..8]</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-white">@pay.UserFullName</div>
+                            <div class="small text-secondary">ID Jugador: @pay.UserId[..8]</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-warning fs-6">@pay.FormattedAmount</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-dark border border-secondary text-light">@pay.PaymentMethod</span>
+                        </td>
+                        <td>
+                            <div class="small text-white">@pay.FormattedDate</div>
+                        </td>
+                        <td>
+                            @if (pay.Status == KitoGame.Shared.Models.PaymentStatus.Confirmed)
+                            {
+                                <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Acreditado</span>
+                                @if (pay.ConfirmedAt.HasValue)
+                                {
+                                    <div class="small text-muted" style="font-size: 11px;">@pay.ConfirmedAt.Value.ToLocalTime().ToString("HH:mm")</div>
+                                }
+                            }
+                            else if (pay.Status == KitoGame.Shared.Models.PaymentStatus.Pending)
+                            {
+                                <span class="badge bg-warning text-dark"><i class="fa-solid fa-hourglass-half me-1"></i> Pendiente</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> Error / Rechazado</span>
+                                @if (!string.IsNullOrEmpty(pay.AdminNote))
+                                {
+                                    <div class="small text-danger" style="font-size: 11px;">@pay.AdminNote</div>
+                                }
+                            }
+                        </td>
+                        <td class="text-end">
+                            @if (pay.Status == KitoGame.Shared.Models.PaymentStatus.Pending)
+                            {
+                                <form method="post" asp-page-handler="Approve" class="d-inline">
+                                    <input type="hidden" name="paymentId" value="@pay.Id" />
+                                    <button type="submit" class="btn btn-sm btn-success py-1 px-2" title="Aprobar y Acreditar Saldo" onclick="return confirm('¿Aprobar recarga de @pay.FormattedAmount para @pay.UserFullName?');">
+                                        <i class="fa-solid fa-check me-1"></i> Aprobar
+                                    </button>
+                                </form>
+
+                                <button type="button" class="btn btn-sm btn-danger py-1 px-2" data-bs-toggle="modal" data-bs-target="#rejectModal_@pay.Id" title="Rechazar Pago">
+                                    <i class="fa-solid fa-xmark me-1"></i> Rechazar
+                                </button>
+
+                                <!-- Modal Rechazo -->
+                                <div class="modal fade text-start" id="rejectModal_@pay.Id" tabindex="-1">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content card-custom text-white">
+                                            <div class="modal-header border-secondary">
+                                                <h5 class="modal-title text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i> Reportar Error / Rechazar Pago</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form method="post" asp-page-handler="Reject">
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="paymentId" value="@pay.Id" />
+                                                    <p class="small text-secondary">Indica el motivo por el cual este pago no se completó (comprobante inválido, transferencia no recibida en Nequi, etc.):</p>
+                                                    <div class="mb-3">
+                                                        <label class="form-label small text-secondary">Motivo del Rechazo</label>
+                                                        <input type="text" name="reason" class="form-control bg-dark border-secondary text-white" placeholder="Ej: Comprobante no coincide o fondos no recibidos" required />
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer border-secondary">
+                                                    <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-danger">Confirmar Rechazo</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Cerrado</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
