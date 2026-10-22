@@ -20,3 +20,4 @@ public class AuditModel : PageModel
         Logs = await _dataService.GetAuditLogsAsync(100);
     }
 }
+

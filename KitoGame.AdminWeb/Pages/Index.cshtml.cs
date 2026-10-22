@@ -27,3 +27,4 @@ public class IndexModel : PageModel
         RecentPayments = allPayments.Take(5).ToList();
     }
 }
+

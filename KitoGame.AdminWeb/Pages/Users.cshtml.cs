@@ -79,3 +79,4 @@ public class UsersModel : PageModel
         return RedirectToPage(new { search = Search, onlyBanned = OnlyBanned });
     }
 }
+

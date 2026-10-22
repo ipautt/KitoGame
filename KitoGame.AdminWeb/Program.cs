@@ -3,10 +3,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuración de servicios
+// Configuración de Razor Pages
 builder.Services.AddRazorPages(options =>
 {
-    // Requiere autenticación por defecto en todas las páginas salvo /Login
     options.Conventions.AuthorizeFolder("/");
     options.Conventions.AllowAnonymousToPage("/Login");
 });
@@ -19,17 +18,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Login";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
+
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
 
 builder.Services.AddSingleton<AdminDataService>();
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error");
-    app.UseHsts();
-}
+app.UseDeveloperExceptionPage();
 
 app.UseStaticFiles();
 app.UseRouting();

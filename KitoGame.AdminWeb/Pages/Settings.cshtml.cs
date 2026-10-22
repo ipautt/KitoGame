@@ -67,3 +67,4 @@ public class SettingsModel : PageModel
         return RedirectToPage();
     }
 }
+
