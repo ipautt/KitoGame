@@ -42,7 +42,7 @@
                     <label class="form-label small fw-semibold text-light">Host o Dirección IP del Cluster</label>
                     <div class="input-group">
                         <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-network-wired"></i></span>
-                        <input type="text" asp-for="Config.DatabaseHost" class="form-control bg-dark border-secondary text-white" placeholder="Ej: kitogamesdb.od2ekmj.mongodb.net o 192.168.1.100:27017" required />
+                        <input type="text" asp-for="Config.DatabaseHost" class="form-control bg-dark border-secondary text-white" placeholder="Ej: cluster0.mongodb.net o 192.168.1.100:27017" required />
                     </div>
                     <div class="small text-muted mt-1">Nombre de dominio del cluster en MongoDB Atlas o IP del servidor.</div>
                 </div>
@@ -52,7 +52,7 @@
                         <label class="form-label small fw-semibold text-light">Usuario de Base de Datos</label>
                         <div class="input-group">
                             <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-user"></i></span>
-                            <input type="text" asp-for="Config.DatabaseUser" class="form-control bg-dark border-secondary text-white" placeholder="Ej: ivdapafi_db_user" required />
+                            <input type="text" asp-for="Config.DatabaseUser" class="form-control bg-dark border-secondary text-white" placeholder="Ej: app_db_user" required />
                         </div>
                     </div>
                     <div class="col-md-6">

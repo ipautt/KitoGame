@@ -192,7 +192,6 @@
                         <Label x:Name="LblUsernameField" Text="Usuario o Correo Electrónico" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
                         <Border BackgroundColor="#FFFDF7" Stroke="#FCD34D" StrokeShape="RoundRectangle 10" Padding="6,0">
                             <Entry x:Name="EntryUsername"
-                                   Text="ivan"
                                    Placeholder="Ej: ivan o ivan@kitogame.com"
                                    PlaceholderColor="#94A3B8"
                                    TextColor="#1E293B"
@@ -204,7 +203,6 @@
                         <Label x:Name="LblPassword" Text="Contraseña" FontSize="12" FontAttributes="Bold" TextColor="#475569" />
                         <Border BackgroundColor="#FFFDF7" Stroke="#FCD34D" StrokeShape="RoundRectangle 10" Padding="6,0">
                             <Entry x:Name="EntryPassword"
-                                   Text="1234"
                                    Placeholder="••••••"
                                    IsPassword="True"
                                    PlaceholderColor="#94A3B8"

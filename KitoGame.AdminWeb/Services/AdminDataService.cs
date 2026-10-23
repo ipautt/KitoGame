@@ -84,6 +84,13 @@ public class AdminDataService
         try
         {
             string connectionString = _currentConfig.BuildConnectionString();
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                IsConnected = false;
+                ConnectionStatusMessage = "⚙️ Base de datos no configurada. Ingresa los parámetros en Ajustes.";
+                return;
+            }
+
             var settings = MongoClientSettings.FromConnectionString(connectionString);
             settings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
             settings.ConnectTimeout = TimeSpan.FromSeconds(5);

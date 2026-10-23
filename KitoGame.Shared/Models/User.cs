@@ -48,3 +48,4 @@ public class User
 
     public bool IsOnline => LastActiveAt.HasValue && (DateTime.UtcNow - LastActiveAt.Value).TotalMinutes <= 15;
 }
+

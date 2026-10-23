@@ -7,16 +7,13 @@ namespace KitoGame.Services;
 
 /// <summary>
 /// Configuración centralizada de conexión a MongoDB Atlas para KitoGame.
+/// Cumple con las normativas de seguridad de MongoDB Atlas sin credenciales quemadas en el repositorio.
 /// </summary>
 public static class MongoDbConfig
 {
-    public const string DatabaseUser = "ivdapafi_db_user";
-    public const string DatabasePassword = "v2D97uyPbkX3QcJa";
-    public const string ClusterHost = "kitogamesdb.od2ekmj.mongodb.net";
     public const string DatabaseName = "KitoGameDb";
 
-    public static string BuildConnectionString() =>
-        $"mongodb+srv://{DatabaseUser}:{DatabasePassword}@{ClusterHost}/?retryWrites=true&w=majority&appName=KitoGame";
+    public static string BuildConnectionString() => MongoDbSecretsProvider.GetActiveConnectionString();
 }
 
 [BsonIgnoreExtraElements]
@@ -30,7 +27,7 @@ public class PlatformSettingsDocument
 }
 
 /// <summary>
-/// Servicio de persistencia en la nube con MongoDB Atlas (kitogamesdb.od2ekmj.mongodb.net).
+/// Servicio de persistencia en la nube con MongoDB Atlas.
 /// </summary>
 public class MongoDbService
 {
@@ -49,7 +46,15 @@ public class MongoDbService
     {
         try
         {
-            var settings = MongoClientSettings.FromConnectionString(MongoDbConfig.BuildConnectionString());
+            string conn = MongoDbConfig.BuildConnectionString();
+            if (string.IsNullOrWhiteSpace(conn))
+            {
+                IsConnected = false;
+                StatusMessage = "Modo local activo";
+                return;
+            }
+
+            var settings = MongoClientSettings.FromConnectionString(conn);
             settings.ServerSelectionTimeout = TimeSpan.FromSeconds(6);
             settings.ConnectTimeout = TimeSpan.FromSeconds(6);
             settings.ServerApi = new ServerApi(ServerApiVersion.V1);
@@ -73,7 +78,7 @@ public class MongoDbService
         {
             await _database.RunCommandAsync((MongoDB.Driver.Command<BsonDocument>)"{ping:1}");
             IsConnected = true;
-            StatusMessage = $"🟢 Conectado a MongoDB Atlas ({MongoDbConfig.ClusterHost})";
+            StatusMessage = "🟢 Conectado a MongoDB Atlas en la Nube";
             return true;
         }
         catch (Exception ex)

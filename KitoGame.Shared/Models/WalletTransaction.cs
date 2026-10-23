@@ -30,3 +30,4 @@ public class WalletTransaction
     [BsonIgnore]
     public string FormattedDate => Timestamp.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
 }
+

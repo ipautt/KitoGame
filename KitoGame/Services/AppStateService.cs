@@ -571,6 +571,15 @@ public class AppStateService
         string? targetOpponentUserId = null,
         bool isPracticeBot = false)
     {
+        return CreateChallengeAsync(gameId, betAmount, targetOpponentUserId, isPracticeBot).GetAwaiter().GetResult();
+    }
+
+    public async Task<(bool Success, string Message, MatchChallenge? Challenge)> CreateChallengeAsync(
+        string gameId,
+        decimal betAmount,
+        string? targetOpponentUserId = null,
+        bool isPracticeBot = false)
+    {
         if (CurrentUser == null)
             return (false, "Debes iniciar sesión.", null);
 
@@ -656,8 +665,14 @@ public class AppStateService
         }
 
         SaveDatabase();
-        _ = MongoDb.UpsertUserAsync(CurrentUser);
-        _ = MongoDb.UpsertChallengeAsync(challenge);
+        try
+        {
+            await MongoDb.UpsertUserAsync(CurrentUser);
+            await MongoDb.UpsertChallengeAsync(challenge);
+        }
+        catch
+        {
+        }
         NotifyStateChanged();
 
         string msg = isPracticeBot
@@ -733,6 +748,11 @@ public class AppStateService
 
     public (bool Success, string Message) AcceptChallenge(string challengeId)
     {
+        return AcceptChallengeAsync(challengeId).GetAwaiter().GetResult();
+    }
+
+    public async Task<(bool Success, string Message)> AcceptChallengeAsync(string challengeId)
+    {
         if (CurrentUser == null)
             return (false, "Inicia sesión para aceptar un reto.");
 
@@ -787,8 +807,14 @@ public class AppStateService
         GameRegistry.GetOrCreateMatchEngine(challenge.Id, challenge.GameId);
 
         SaveDatabase();
-        _ = MongoDb.UpsertUserAsync(CurrentUser);
-        _ = MongoDb.UpsertChallengeAsync(challenge);
+        try
+        {
+            await MongoDb.UpsertUserAsync(CurrentUser);
+            await MongoDb.UpsertChallengeAsync(challenge);
+        }
+        catch
+        {
+        }
         NotifyStateChanged();
         return (true, $"¡Apuesta igualada contra {challenge.CreatorUsername}! Pozo total en custodia: ${challenge.TotalPot:N0} COP.");
     }
@@ -995,11 +1021,21 @@ public class AppStateService
             {
                 string json = File.ReadAllText(_dbFilePath);
                 var loaded = JsonSerializer.Deserialize<TemporaryDatabaseSchema>(json);
-                if (loaded != null && loaded.UsersTable.Count > 0)
+                if (loaded != null)
                 {
                     _db = loaded;
-                    CurrentUser = _db.UsersTable.FirstOrDefault(u => u.Id == _db.LastLoggedInUserId)
-                                  ?? _db.UsersTable.FirstOrDefault();
+                    // Limpiar usuario de pruebas precargado para garantizar que solo existan cuentas reales
+                    _db.UsersTable.RemoveAll(u => u.Id == "user-ivan-01");
+                    _db.MatchChallengesTable.RemoveAll(c => c.CreatorId == "user-ivan-01" || c.CreatorId == "RIVAL-ONLINE");
+
+                    if (!string.IsNullOrWhiteSpace(_db.LastLoggedInUserId))
+                    {
+                        CurrentUser = _db.UsersTable.FirstOrDefault(u => u.Id == _db.LastLoggedInUserId);
+                    }
+                    else
+                    {
+                        CurrentUser = null;
+                    }
                     return;
                 }
             }
@@ -1021,27 +1057,7 @@ public class AppStateService
             PlatformTreasuryBalance = 0m
         };
 
-        var mainUser = new User
-        {
-            Id = "user-ivan-01",
-            FirstName = "Ivan",
-            LastName = "Pautt",
-            Email = "ivan@kitogame.com",
-            Phone = "3000000000",
-            Username = "ivan",
-            Password = "1234",
-            Balance = 5000m,
-            LockedBalance = 0m,
-            IsAdmin = true,
-            NotificationsEnabled = true
-        };
-
-        _db.UsersTable.Add(mainUser);
-        _db.LastLoggedInUserId = mainUser.Id;
-        CurrentUser = mainUser;
-
-        AddTransaction(mainUser, 5000m, TransactionType.Deposit, "Saldo inicial confirmado en base de datos temporal");
-        EnsureSampleIncomingChallengesForUser(mainUser);
+        CurrentUser = null;
         SaveDatabase();
     }
 

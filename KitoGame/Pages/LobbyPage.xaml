@@ -152,7 +152,7 @@
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalOptions="Center">
                                 <Label x:Name="LblMongoStatus"
                                        Grid.Column="0"
-                                       Text="☁️ MongoDB Atlas: kitogamesdb.od2ekmj.mongodb.net"
+                                       Text="☁️ Servidor de Partidas en la Nube (Conectado)"
                                        FontSize="11"
                                        FontAttributes="Bold"
                                        TextColor="#047857"
@@ -410,9 +410,6 @@
             <Border BackgroundColor="#FFFFFF" Stroke="#3B82F6" StrokeThickness="1.5" StrokeShape="RoundRectangle 14" Padding="14">
                 <VerticalStackLayout Spacing="12">
                     <Grid ColumnDefinitions="*,Auto">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnToggleSection3Tapped" />
-                        </Grid.GestureRecognizers>
                         <Label x:Name="LblSection3Active"
                                Grid.Column="0"
                                Text="🏆 3. RETOS RECIBIDOS Y PARTIDAS EN CURSO"
@@ -420,22 +417,33 @@
                                FontAttributes="Bold"
                                TextColor="#1D4ED8"
                                VerticalOptions="Center" />
-                        <Button x:Name="BtnToggleSec3"
-                                Grid.Column="1"
-                                Text="▼ Abrir"
-                                Clicked="OnToggleSection3Tapped"
-                                BackgroundColor="#EFF6FF"
-                                TextColor="#1D4ED8"
-                                BorderColor="#93C5FD"
-                                BorderWidth="1"
-                                FontAttributes="Bold"
-                                FontSize="11"
-                                HeightRequest="30"
-                                Padding="10,0"
-                                CornerRadius="8" />
+                        <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                            <Button x:Name="BtnRefreshChallenges"
+                                    Text="🔄 Actualizar"
+                                    Clicked="OnRefreshChallengesClicked"
+                                    BackgroundColor="#2563EB"
+                                    TextColor="#FFFFFF"
+                                    FontAttributes="Bold"
+                                    FontSize="11"
+                                    HeightRequest="30"
+                                    Padding="10,0"
+                                    CornerRadius="8" />
+                            <Button x:Name="BtnToggleSec3"
+                                    Text="▲ Cerrar"
+                                    Clicked="OnToggleSection3Tapped"
+                                    BackgroundColor="#EFF6FF"
+                                    TextColor="#1D4ED8"
+                                    BorderColor="#93C5FD"
+                                    BorderWidth="1"
+                                    FontAttributes="Bold"
+                                    FontSize="11"
+                                    HeightRequest="30"
+                                    Padding="10,0"
+                                    CornerRadius="8" />
+                        </HorizontalStackLayout>
                     </Grid>
 
-                    <VerticalStackLayout x:Name="Section3Content" Spacing="10" IsVisible="False">
+                    <VerticalStackLayout x:Name="Section3Content" Spacing="10" IsVisible="True">
                         <VerticalStackLayout x:Name="ActiveChallengesContainer" Spacing="10" />
                     </VerticalStackLayout>
                 </VerticalStackLayout>

@@ -8,12 +8,12 @@ public class SystemConfig
     [BsonId]
     public string Id { get; set; } = "system_master_config";
 
-    // Parámetros de la Base de Datos
-    public string DatabaseHost { get; set; } = "kitogamesdb.od2ekmj.mongodb.net";
-    public string DatabaseUser { get; set; } = "ivdapafi_db_user";
-    public string DatabasePassword { get; set; } = "v2D97uyPbkX3QcJa";
+    // Parámetros de la Base de Datos (Configurados de forma segura en local o variables de entorno)
+    public string DatabaseHost { get; set; } = string.Empty;
+    public string DatabaseUser { get; set; } = string.Empty;
+    public string DatabasePassword { get; set; } = string.Empty;
     public string DatabaseName { get; set; } = "KitoGameDb";
-    public bool IsSrv { get; set; } = true;
+    public bool IsSrv { get; set; } = false;
     public string CustomConnectionString { get; set; } = string.Empty;
 
     // Reglas Globales de KitoGame
@@ -28,16 +28,50 @@ public class SystemConfig
 
     // Auditoría
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    public string UpdatedBy { get; set; } = "ivan";
+    public string UpdatedBy { get; set; } = "admin";
 
     public string BuildConnectionString()
     {
         if (!string.IsNullOrWhiteSpace(CustomConnectionString))
             return CustomConnectionString.Trim();
 
-        if (IsSrv)
-            return $"mongodb+srv://{DatabaseUser}:{DatabasePassword}@{DatabaseHost}/?retryWrites=true&w=majority&appName=KitoGame";
+        // 1. Variable de entorno
+        string? envConn = Environment.GetEnvironmentVariable("KITOGAME_MONGODB_URI")
+                       ?? Environment.GetEnvironmentVariable("MONGODB_URI");
+        if (!string.IsNullOrWhiteSpace(envConn))
+            return envConn.Trim();
 
-        return $"mongodb://{DatabaseUser}:{DatabasePassword}@{DatabaseHost}/{DatabaseName}?retryWrites=true&w=majority";
+        if (string.IsNullOrWhiteSpace(DatabaseHost) || string.IsNullOrWhiteSpace(DatabaseUser) || string.IsNullOrWhiteSpace(DatabasePassword))
+            return string.Empty;
+
+        string user = Uri.EscapeDataString(DatabaseUser.Trim());
+        string pass = Uri.EscapeDataString(DatabasePassword.Trim());
+        string host = DatabaseHost.Trim();
+        string db = string.IsNullOrWhiteSpace(DatabaseName) ? "KitoGameDb" : DatabaseName.Trim();
+
+        // Si el host es de MongoDB Atlas (*.mongodb.net)
+        if (host.EndsWith(".mongodb.net", StringComparison.OrdinalIgnoreCase))
+        {
+            // Shard individual o réplica completa
+            if (host.Contains("shard-00", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"mongodb://{user}:{pass}@{host}/{db}?ssl=true&authSource=admin&replicaSet=atlas-71p6ro-shard-0&retryWrites=true&w=majority&appName=KitoGame";
+            }
+
+            // Clúster kitogamesdb en modo réplica directa (para redes celulares y WiFi sin SRV)
+            if (!IsSrv && host.Contains("kitogamesdb", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"mongodb://{user}:{pass}@ac-chffaye-shard-00-00.od2ekmj.mongodb.net:27017,ac-chffaye-shard-00-01.od2ekmj.mongodb.net:27017,ac-chffaye-shard-00-02.od2ekmj.mongodb.net:27017/{db}?ssl=true&authSource=admin&replicaSet=atlas-71p6ro-shard-0&retryWrites=true&w=majority&appName=KitoGame";
+            }
+
+            // Modo SRV estándar de Atlas
+            return $"mongodb+srv://{user}:{pass}@{host}/?authSource=admin&retryWrites=true&w=majority&appName=KitoGame";
+        }
+
+        if (IsSrv)
+            return $"mongodb+srv://{user}:{pass}@{host}/?authSource=admin&retryWrites=true&w=majority&appName=KitoGame";
+
+        return $"mongodb://{user}:{pass}@{host}/{db}?authSource=admin&retryWrites=true&w=majority";
     }
 }
+

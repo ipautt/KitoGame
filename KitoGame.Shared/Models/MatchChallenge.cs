@@ -50,3 +50,4 @@ public class MatchChallenge
     [BsonIgnore]
     public string FormattedPot => $"${TotalPot:N0} COP";
 }
+

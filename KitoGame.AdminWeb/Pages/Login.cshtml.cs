@@ -54,10 +54,14 @@ public class LoginModel : PageModel
         {
             passwordMatches = adminUser.Password == Password;
         }
-        else if (isMasterUsername && (Password == "1234" || Password == "v2D97uyPbkX3QcJa"))
+        else
         {
-            // Respaldo de acceso maestro de emergencia
-            passwordMatches = true;
+            // Opcional: Clave maestra por variable de entorno en el servidor
+            string? masterEnvPass = Environment.GetEnvironmentVariable("ADMIN_MASTER_PASSWORD");
+            if (!string.IsNullOrWhiteSpace(masterEnvPass) && isMasterUsername && Password == masterEnvPass)
+            {
+                passwordMatches = true;
+            }
         }
 
         if (!passwordMatches)

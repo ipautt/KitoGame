@@ -16,3 +16,4 @@ public class AuditLog
 
     public string FormattedDate => Timestamp.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss");
 }
+

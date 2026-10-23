@@ -54,7 +54,7 @@ public partial class LobbyPage : ContentPage
     {
         _lobbySyncTimer?.Stop();
         _lobbySyncTimer = Dispatcher.CreateTimer();
-        _lobbySyncTimer.Interval = TimeSpan.FromSeconds(4);
+        _lobbySyncTimer.Interval = TimeSpan.FromSeconds(2);
         _lobbySyncTimer.Tick += async (_, _) =>
         {
             if (_isSyncing) return;
@@ -74,6 +74,22 @@ public partial class LobbyPage : ContentPage
             }
         };
         _lobbySyncTimer.Start();
+    }
+
+    private async void OnRefreshChallengesClicked(object? sender, EventArgs e)
+    {
+        BtnRefreshChallenges.IsEnabled = false;
+        BtnRefreshChallenges.Text = "⏳...";
+        try
+        {
+            await _appState.SyncWithMongoAtlasAsync();
+            RefreshAllUI();
+        }
+        finally
+        {
+            BtnRefreshChallenges.Text = "🔄 Actualizar";
+            BtnRefreshChallenges.IsEnabled = true;
+        }
     }
 
     private async void OnSyncMongoClicked(object? sender, EventArgs e)
@@ -102,7 +118,7 @@ public partial class LobbyPage : ContentPage
     private void OnToggleSection3Tapped(object? sender, EventArgs e)
     {
         Section3Content.IsVisible = !Section3Content.IsVisible;
-        BtnToggleSec3.Text = Section3Content.IsVisible ? "▲ Recoger" : "▼ Abrir";
+        BtnToggleSec3.Text = Section3Content.IsVisible ? "▲ Cerrar" : "▼ Abrir";
     }
 
     private void OnToggleSection4Tapped(object? sender, EventArgs e)
@@ -699,7 +715,7 @@ public partial class LobbyPage : ContentPage
             return;
         }
 
-        var result = _appState.CreateChallenge(
+        var result = await _appState.CreateChallengeAsync(
             _selectedGameId,
             betAmount,
             _selectedTargetUserId,
@@ -717,7 +733,7 @@ public partial class LobbyPage : ContentPage
 
     private async Task HandleAcceptChallengeAsync(string challengeId)
     {
-        var result = _appState.AcceptChallenge(challengeId);
+        var result = await _appState.AcceptChallengeAsync(challengeId);
         if (!result.Success)
         {
             await DisplayAlert("Info", result.Message, "OK");

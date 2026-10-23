@@ -13,10 +13,15 @@ public partial class LoginPage : ContentPage
         _appState = appState;
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
         ApplyLocalization();
+
+        if (_appState.CurrentUser != null)
+        {
+            await Shell.Current.GoToAsync("//LobbyPage");
+        }
     }
 
     private void OnLangEsClicked(object? sender, EventArgs e)
@@ -160,7 +165,6 @@ public partial class LoginPage : ContentPage
             accept: "Continuar",
             cancel: "Cancelar",
             placeholder: "ejemplo@gmail.com",
-            initialValue: "ivan.pautt@gmail.com",
             keyboard: Keyboard.Email);
 
         if (string.IsNullOrWhiteSpace(email))
@@ -171,8 +175,7 @@ public partial class LoginPage : ContentPage
             "Confirma tu nombre completo de tu cuenta Google:",
             accept: "Entrar a KitoGame",
             cancel: "Cancelar",
-            placeholder: "Ivan Pautt",
-            initialValue: "Ivan Pautt");
+            placeholder: "Tu Nombre Completo");
 
         if (fullName == null)
             return;

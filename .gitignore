@@ -31,7 +31,14 @@ bld/
 # Keystores and local secrets
 *.keystore
 *.jks
+*.apk
 DOCUMENTACION_PRIVADA_KITOGAME.md
 admin_db_config.json
+*.secrets.json
+secrets.json
+mongo_secrets.json
+appsettings*.secrets.json
+*SecretsProvider.local.cs
+*.local.cs
 
 
