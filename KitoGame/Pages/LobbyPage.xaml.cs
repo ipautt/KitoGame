@@ -62,11 +62,18 @@ public partial class LobbyPage : ContentPage
             try
             {
                 bool ok = await _appState.SyncWithMongoAtlasAsync();
-                if (ok)
+                MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    LblMongoStatus.Text = $"🟢 MongoDB Atlas En Línea ({_appState.Users.Count} usuarios)";
-                    RefreshAllUI();
-                }
+                    if (ok)
+                    {
+                        LblMongoStatus.Text = $"🟢 MongoDB Atlas En Línea ({_appState.Users.Count} usuarios)";
+                        RefreshAllUI();
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LobbyLiveSync] Error: {ex.Message}");
             }
             finally
             {

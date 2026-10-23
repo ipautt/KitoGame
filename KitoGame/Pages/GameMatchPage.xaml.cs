@@ -47,18 +47,28 @@ public partial class GameMatchPage : ContentPage
     private void StartLiveMatchSyncTimer()
     {
         _liveSyncTimer?.Stop();
-        if (_challenge == null || _challenge.IsPracticeBot)
+        if (_challenge != null && _challenge.IsPracticeBot)
             return;
 
         _liveSyncTimer = Dispatcher.CreateTimer();
-        _liveSyncTimer.Interval = TimeSpan.FromMilliseconds(1500);
-        _liveSyncTimer.Tick += async (_, _) => await SyncLiveMatchFromCloudAsync();
+        _liveSyncTimer.Interval = TimeSpan.FromMilliseconds(1000);
+        _liveSyncTimer.Tick += async (_, _) =>
+        {
+            try
+            {
+                await SyncLiveMatchFromCloudAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SyncTimer] Tick Error: {ex.Message}");
+            }
+        };
         _liveSyncTimer.Start();
     }
 
     private async Task SyncLiveMatchFromCloudAsync()
     {
-        if (_isSyncingCloud || _isFinishingMatch || _engine == null || _challenge == null)
+        if (_isSyncingCloud || _isFinishingMatch)
             return;
 
         _isSyncingCloud = true;
@@ -66,13 +76,27 @@ public partial class GameMatchPage : ContentPage
         {
             var latest = await _appState.PullLiveChallengeStateAsync(_challengeId);
             if (latest == null)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    LblConnectionStatus.Text = "☁️ Local";
+                    LblConnectionStatus.TextColor = Color.FromArgb("#64748B");
+                });
                 return;
+            }
 
             _challenge = latest;
-            UpdatePlayerRolesAndHeaders();
 
-            // Aplicar jugadas nuevas enviadas por el contrincante desde su celular
-            if (_challenge.SerializedMoves.Count > _appliedMoveCount)
+            if (_engine == null)
+            {
+                _engine = _appState.GameRegistry.GetOrCreateMatchEngine(_challenge.Id, _challenge.GameId);
+                _engine.ResetBoard();
+                _appliedMoveCount = 0;
+                _boardDrawable.Engine = _engine;
+            }
+
+            bool hasNewMoves = _challenge.SerializedMoves.Count > _appliedMoveCount;
+            if (hasNewMoves)
             {
                 for (int i = _appliedMoveCount; i < _challenge.SerializedMoves.Count; i++)
                 {
@@ -82,28 +106,63 @@ public partial class GameMatchPage : ContentPage
                     }
                 }
                 _appliedMoveCount = _challenge.SerializedMoves.Count;
-                _selectedCell = _engine.ForcedPiecePosition;
-                _highlightedMoves = _selectedCell.HasValue
-                    ? _engine.GetValidMoves(_selectedCell.Value)
-                    : Array.Empty<BoardPosition>();
-
-                LblHelperHint.Text = _engine.CurrentTurn == _mySide
-                    ? "¡El contrincante realizó su jugada! Es tu turno."
-                    : "El contrincante continúa su salto doble...";
             }
 
-            RefreshMatchUI();
-
-            // Si la partida terminó en la nube (por jaque, captura total, rendición o tablas del rival)
-            if ((_challenge.Status == MatchStatus.Completed || _challenge.Status == MatchStatus.Draw || _engine.IsGameOver) &&
-                !_isFinishingMatch)
+            MainThread.BeginInvokeOnMainThread(async () =>
             {
-                await FinalizeAndPayMatchAsync();
-            }
+                LblConnectionStatus.Text = "🟢 En Vivo";
+                LblConnectionStatus.TextColor = Color.FromArgb("#16A34A");
+
+                UpdatePlayerRolesAndHeaders();
+
+                if (hasNewMoves)
+                {
+                    _selectedCell = _engine.ForcedPiecePosition;
+                    _highlightedMoves = _selectedCell.HasValue
+                        ? _engine.GetValidMoves(_selectedCell.Value)
+                        : Array.Empty<BoardPosition>();
+
+                    LblHelperHint.Text = _engine.CurrentTurn == _mySide
+                        ? "¡El contrincante realizó su jugada! Es tu turno."
+                        : "El contrincante continúa su jugada...";
+                }
+
+                RefreshMatchUI();
+
+                if ((_challenge.Status == MatchStatus.Completed || _challenge.Status == MatchStatus.Draw || _engine.IsGameOver) &&
+                    !_isFinishingMatch)
+                {
+                    await FinalizeAndPayMatchAsync();
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SyncLiveMatch] Error: {ex.Message}");
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                LblConnectionStatus.Text = "⚠️ Error Sinc";
+                LblConnectionStatus.TextColor = Color.FromArgb("#DC2626");
+            });
         }
         finally
         {
             _isSyncingCloud = false;
+        }
+    }
+
+    private async void OnManualSyncClicked(object? sender, EventArgs e)
+    {
+        BtnManualSync.IsEnabled = false;
+        BtnManualSync.Text = "⏳...";
+        try
+        {
+            await SyncLiveMatchFromCloudAsync();
+        }
+        finally
+        {
+            BtnManualSync.IsEnabled = true;
+            BtnManualSync.Text = "🔄 Refrescar";
         }
     }
 
@@ -132,7 +191,15 @@ public partial class GameMatchPage : ContentPage
     {
         _challenge = _appState.Challenges.FirstOrDefault(c => c.Id == _challengeId);
         if (_challenge == null)
+        {
+            _challenge = await _appState.PullLiveChallengeStateAsync(_challengeId);
+        }
+
+        if (_challenge == null)
+        {
+            LblTurnBanner.Text = "Cargando datos de la partida...";
             return;
+        }
 
         _engine = _appState.GameRegistry.GetOrCreateMatchEngine(_challenge.Id, _challenge.GameId);
         _engine.ResetBoard();
@@ -150,19 +217,24 @@ public partial class GameMatchPage : ContentPage
         _boardDrawable.Engine = _engine;
         Title = $"{_challenge.GameName} (#{_challenge.Id})";
 
-        UpdatePlayerRolesAndHeaders();
-
-        if (_challenge.IsPracticeBot && !_engine.IsGameOver && _engine.CurrentTurn == PlayerSide.Player2)
+        MainThread.BeginInvokeOnMainThread(async () =>
         {
-            await ExecutePracticeBotTurnAsync();
-        }
-        else if (_engine.ForcedPiecePosition.HasValue && _engine.CurrentTurn == _mySide)
-        {
-            _selectedCell = _engine.ForcedPiecePosition.Value;
-            _highlightedMoves = _engine.GetValidMoves(_selectedCell.Value);
-        }
+            UpdatePlayerRolesAndHeaders();
 
-        RefreshMatchUI();
+            if (_challenge.IsPracticeBot && !_engine.IsGameOver && _engine.CurrentTurn == PlayerSide.Player2)
+            {
+                await ExecutePracticeBotTurnAsync();
+            }
+            else if (_engine.ForcedPiecePosition.HasValue && _engine.CurrentTurn == _mySide)
+            {
+                _selectedCell = _engine.ForcedPiecePosition.Value;
+                _highlightedMoves = _engine.GetValidMoves(_selectedCell.Value);
+            }
+
+            RefreshMatchUI();
+        });
+
+        StartLiveMatchSyncTimer();
     }
 
     private void UpdatePlayerRolesAndHeaders()

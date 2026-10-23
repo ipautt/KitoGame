@@ -14,14 +14,15 @@
                     StrokeThickness="2"
                     StrokeShape="RoundRectangle 14"
                     Padding="12,10">
-                <VerticalStackLayout Spacing="4">
-                    <Grid ColumnDefinitions="*,Auto">
+                <VerticalStackLayout Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <Label x:Name="LblMatchTitle"
                                Grid.Column="0"
                                Text="🔴 Damas Clásicas • #DAMAS1K"
-                               FontSize="15"
+                               FontSize="14"
                                FontAttributes="Bold"
-                               TextColor="#1E293B" />
+                               TextColor="#1E293B"
+                               VerticalOptions="Center" />
                         <Border Grid.Column="1"
                                 BackgroundColor="#10B981"
                                 StrokeThickness="0"
@@ -35,11 +36,34 @@
                         </Border>
                     </Grid>
 
-                    <Label x:Name="LblPrizeBreakdown"
-                           Text="Premio Neto al Ganador: $1.800 COP (Comisión 10%: $200 COP)"
-                           FontSize="12"
-                           FontAttributes="Bold"
-                           TextColor="#B45309" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                        <Label x:Name="LblPrizeBreakdown"
+                               Grid.Column="0"
+                               Text="Premio Neto: $1.800 COP (Comisión 10%)"
+                               FontSize="11"
+                               FontAttributes="Bold"
+                               TextColor="#B45309"
+                               VerticalOptions="Center" />
+
+                        <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                            <Label x:Name="LblConnectionStatus"
+                                   Text="🟢 En Vivo"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="#16A34A"
+                                   VerticalOptions="Center" />
+                            <Button x:Name="BtnManualSync"
+                                    Text="🔄 Refrescar"
+                                    Clicked="OnManualSyncClicked"
+                                    BackgroundColor="#2563EB"
+                                    TextColor="#FFFFFF"
+                                    FontAttributes="Bold"
+                                    FontSize="10"
+                                    HeightRequest="28"
+                                    Padding="8,0"
+                                    CornerRadius="6" />
+                        </HorizontalStackLayout>
+                    </Grid>
                 </VerticalStackLayout>
             </Border>
 
