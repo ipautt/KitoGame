@@ -767,6 +767,11 @@ public partial class LobbyPage : ContentPage
         await Navigation.PushAsync(new WalletPage(_appState));
     }
 
+    private async void OnOpenSettingsClicked(object? sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new SettingsPage(_appState));
+    }
+
     private async void OnOpenAdminClicked(object? sender, EventArgs e)
     {
         if (_appState.CurrentUser?.IsAdmin != true)

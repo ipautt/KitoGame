@@ -14,6 +14,8 @@ public class TemporaryDatabaseSchema
     public decimal CommissionPercentage { get; set; } = 10m;
     public decimal PlatformTreasuryBalance { get; set; } = 0m;
     public string? LastLoggedInUserId { get; set; }
+    public bool VibrationOnTurnEnabled { get; set; } = true;
+    public bool NotificationSoundEnabled { get; set; } = true;
 
     public List<User> UsersTable { get; set; } = new();
     public List<PaymentRequest> PaymentRequestsTable { get; set; } = new();
@@ -50,6 +52,116 @@ public class AppStateService
     public decimal PlatformTreasuryBalance => _db.PlatformTreasuryBalance;
     public IReadOnlyList<User> Users => _db.UsersTable;
     public IReadOnlyList<MatchChallenge> Challenges => _db.MatchChallengesTable.OrderByDescending(c => c.CreatedAt).ToList();
+
+    public bool VibrationOnTurnEnabled
+    {
+        get => _db.VibrationOnTurnEnabled;
+        set
+        {
+            if (_db.VibrationOnTurnEnabled != value)
+            {
+                _db.VibrationOnTurnEnabled = value;
+                SaveDatabase();
+                NotifyStateChanged();
+            }
+        }
+    }
+
+    public bool NotificationSoundEnabled
+    {
+        get => _db.NotificationSoundEnabled;
+        set
+        {
+            if (_db.NotificationSoundEnabled != value)
+            {
+                _db.NotificationSoundEnabled = value;
+                SaveDatabase();
+                NotifyStateChanged();
+            }
+        }
+    }
+
+    public void TriggerTurnVibration()
+    {
+        if (!VibrationOnTurnEnabled) return;
+        try
+        {
+            if (Vibration.Default.IsSupported)
+            {
+                Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(450));
+            }
+            else
+            {
+                HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TriggerTurnVibration] Error: {ex.Message}");
+        }
+    }
+
+    public void PlayNotificationSoundAndVibrate()
+    {
+        if (NotificationSoundEnabled)
+        {
+            try
+            {
+#if ANDROID
+                var uri = Android.Media.RingtoneManager.GetDefaultUri(Android.Media.RingtoneType.Notification);
+                var ringtone = Android.Media.RingtoneManager.GetRingtone(Android.App.Application.Context, uri);
+                ringtone?.Play();
+#endif
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PlayNotificationSound] Error: {ex.Message}");
+            }
+        }
+
+        if (VibrationOnTurnEnabled)
+        {
+            try
+            {
+                if (Vibration.Default.IsSupported)
+                {
+                    Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(300));
+                }
+                else
+                {
+                    HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+                }
+            }
+            catch { }
+        }
+    }
+
+    public async Task<bool> SendMatchChatMessageAsync(string challengeId, string text, bool isSystem = false)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+
+        var message = new MatchChatMessage
+        {
+            SenderId = isSystem ? "SYSTEM" : (CurrentUser?.Id ?? "ANON"),
+            SenderName = isSystem ? "Sistema" : (CurrentUser?.DisplayName ?? "Jugador"),
+            Text = text.Trim(),
+            Timestamp = DateTime.UtcNow,
+            IsSystem = isSystem
+        };
+
+        lock (_dbLock)
+        {
+            var ch = _db.MatchChallengesTable.FirstOrDefault(c => c.Id == challengeId);
+            if (ch != null)
+            {
+                ch.ChatMessages.Add(message);
+                SaveDatabase();
+            }
+        }
+
+        bool ok = await MongoDb.PushChatMessageAsync(challengeId, message);
+        return ok;
+    }
 
     public void ChangeLanguage(string langCode)
     {
@@ -1022,6 +1134,7 @@ public class AppStateService
         if (sendSystemPush && (CurrentUser == null || CurrentUser.NotificationsEnabled))
         {
             NativeNotificationService.ShowSystemNotification(notif);
+            PlayNotificationSoundAndVibrate();
         }
 
         return notif;
@@ -1265,6 +1378,7 @@ public class AppStateService
                         if (!rn.IsRead && CurrentUser.NotificationsEnabled)
                         {
                             NativeNotificationService.ShowSystemNotification(rn);
+                            PlayNotificationSoundAndVibrate();
                         }
                     }
                 }

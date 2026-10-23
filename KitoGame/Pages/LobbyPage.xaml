@@ -49,16 +49,29 @@
                                    TextColor="#059669" />
                         </VerticalStackLayout>
 
-                        <Button x:Name="BtnLogout"
-                                Grid.Column="2"
-                                Text="Salir"
-                                Clicked="OnLogoutClicked"
-                                BackgroundColor="#FEE2E2"
-                                TextColor="#B91C1C"
-                                FontAttributes="Bold"
-                                FontSize="12"
-                                HeightRequest="34"
-                                CornerRadius="8" />
+                        <HorizontalStackLayout Grid.Column="2" Spacing="6" VerticalOptions="Center">
+                            <Button x:Name="BtnQuickSettings"
+                                    Text="??"
+                                    Clicked="OnOpenSettingsClicked"
+                                    BackgroundColor="#FEF3C7"
+                                    TextColor="#92400E"
+                                    BorderColor="#F59E0B"
+                                    BorderWidth="1.2"
+                                    FontSize="14"
+                                    HeightRequest="34"
+                                    WidthRequest="38"
+                                    Padding="0"
+                                    CornerRadius="8" />
+                            <Button x:Name="BtnLogout"
+                                    Text="Salir"
+                                    Clicked="OnLogoutClicked"
+                                    BackgroundColor="#FEE2E2"
+                                    TextColor="#B91C1C"
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    HeightRequest="34"
+                                    CornerRadius="8" />
+                        </HorizontalStackLayout>
                     </Grid>
 
                     <!-- Selector Rápido de Idioma (Con Padding explícito para que se vea nítido en Android) -->

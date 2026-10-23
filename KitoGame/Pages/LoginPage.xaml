@@ -86,7 +86,7 @@
                                HeightRequest="116"
                                WidthRequest="116" />
                     </Border>
-                    <Label Text="KITO GAME"
+                    <Label Text="KitoGame"
                            FontSize="28"
                            FontAttributes="Bold"
                            TextColor="#B45309"

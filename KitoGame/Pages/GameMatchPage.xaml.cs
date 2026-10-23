@@ -21,6 +21,8 @@ public partial class GameMatchPage : ContentPage
     private bool _isSyncingCloud;
     private bool _isFinishingMatch;
     private IDispatcherTimer? _liveSyncTimer;
+    private int _renderedChatCount;
+    private bool _hasAnnouncedPresence;
 
     public GameMatchPage(AppStateService appState, string challengeId)
     {
@@ -125,7 +127,15 @@ public partial class GameMatchPage : ContentPage
                     LblHelperHint.Text = _engine.CurrentTurn == _mySide
                         ? "¡El contrincante realizó su jugada! Es tu turno."
                         : "El contrincante continúa su jugada...";
+
+                    // Si la jugada del contrincante me cedió el turno: ¡Vibrar!
+                    if (_engine.CurrentTurn == _mySide)
+                    {
+                        _appState.TriggerTurnVibration();
+                    }
                 }
+
+                SyncChatMessages();
 
                 RefreshMatchUI();
 
@@ -186,6 +196,146 @@ public partial class GameMatchPage : ContentPage
             BtnManualSync.IsEnabled = true;
             BtnManualSync.Text = "🔄 Refrescar";
         }
+    }
+
+    private void SyncChatMessages()
+    {
+        if (_challenge == null) return;
+
+        var messages = _challenge.ChatMessages;
+        if (messages.Count == _renderedChatCount) return;
+
+        bool hasNewOpponentMessage = false;
+        string? myId = _appState.CurrentUser?.Id;
+
+        if (_renderedChatCount == 0 && messages.Count > 0)
+        {
+            ChatMessagesStack.Children.Clear();
+        }
+
+        for (int i = _renderedChatCount; i < messages.Count; i++)
+        {
+            var msg = messages[i];
+            bool isMe = !msg.IsSystem && msg.SenderId == myId;
+
+            if (!isMe && _renderedChatCount > 0)
+            {
+                hasNewOpponentMessage = true;
+            }
+
+            var bubble = CreateChatBubble(msg, isMe);
+            ChatMessagesStack.Children.Add(bubble);
+        }
+
+        _renderedChatCount = messages.Count;
+        LblChatCountBadge.Text = $"{messages.Count} mensajes";
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                await Task.Delay(50);
+                await ChatScrollView.ScrollToAsync(0, ChatScrollView.ContentSize.Height, true);
+            }
+            catch { }
+        });
+
+        if (hasNewOpponentMessage)
+        {
+            _appState.PlayNotificationSoundAndVibrate();
+        }
+    }
+
+    private View CreateChatBubble(MatchChatMessage msg, bool isMe)
+    {
+        if (msg.IsSystem)
+        {
+            return new Border
+            {
+                BackgroundColor = Color.FromArgb("#FEF3C7"),
+                Stroke = Color.FromArgb("#FCD34D"),
+                StrokeThickness = 1,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(8) },
+                Padding = new Thickness(8, 4),
+                HorizontalOptions = LayoutOptions.Center,
+                Content = new Label
+                {
+                    Text = msg.Text,
+                    FontSize = 10,
+                    FontAttributes = FontAttributes.Bold,
+                    TextColor = Color.FromArgb("#92400E"),
+                    HorizontalTextAlignment = TextAlignment.Center
+                }
+            };
+        }
+
+        var stack = new VerticalStackLayout { Spacing = 2 };
+        stack.Children.Add(new Label
+        {
+            Text = isMe ? "Tú" : msg.SenderName,
+            FontSize = 9,
+            FontAttributes = FontAttributes.Bold,
+            TextColor = isMe ? Color.FromArgb("#DBEAFE") : Color.FromArgb("#6D28D9"),
+            HorizontalOptions = isMe ? LayoutOptions.End : LayoutOptions.Start
+        });
+
+        stack.Children.Add(new Label
+        {
+            Text = msg.Text,
+            FontSize = 12,
+            TextColor = isMe ? Colors.White : Color.FromArgb("#1E293B"),
+            HorizontalOptions = isMe ? LayoutOptions.End : LayoutOptions.Start
+        });
+
+        return new Border
+        {
+            BackgroundColor = isMe ? Color.FromArgb("#2563EB") : Color.FromArgb("#F1F5F9"),
+            Stroke = isMe ? Color.FromArgb("#1D4ED8") : Color.FromArgb("#CBD5E1"),
+            StrokeThickness = 1,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(10) },
+            Padding = new Thickness(10, 6),
+            HorizontalOptions = isMe ? LayoutOptions.End : LayoutOptions.Start,
+            MaximumWidthRequest = 280,
+            Content = stack
+        };
+    }
+
+    private async void AnnouncePresenceAsync()
+    {
+        if (_hasAnnouncedPresence || _challenge == null || _challenge.IsPracticeBot) return;
+        _hasAnnouncedPresence = true;
+        string name = _appState.CurrentUser?.DisplayName ?? "Jugador";
+        await _appState.SendMatchChatMessageAsync(_challengeId, $"🟢 @{name} se ha conectado a la partida.", isSystem: true);
+    }
+
+    private async void OnSendChatMessageClicked(object? sender, EventArgs e)
+    {
+        string text = TxtChatMessage.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        TxtChatMessage.Text = string.Empty;
+        await _appState.SendMatchChatMessageAsync(_challengeId, text);
+        await SyncLiveMatchFromCloudAsync();
+    }
+
+    private async void OnQuickMessageClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button btn && !string.IsNullOrWhiteSpace(btn.Text))
+        {
+            await _appState.SendMatchChatMessageAsync(_challengeId, btn.Text);
+            await SyncLiveMatchFromCloudAsync();
+        }
+    }
+
+    private void OnToggleChatClicked(object? sender, EventArgs e)
+    {
+        ChatBodyLayout.IsVisible = !ChatBodyLayout.IsVisible;
+        BtnToggleChat.Text = ChatBodyLayout.IsVisible ? "Ocultar" : "Mostrar";
+    }
+
+    private async void OnMatchSettingsClicked(object? sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new SettingsPage(_appState));
     }
 
     private static bool TryParseMoveToken(string token, out BoardPosition from, out BoardPosition to)
@@ -254,9 +404,11 @@ public partial class GameMatchPage : ContentPage
             }
 
             RefreshMatchUI();
+            SyncChatMessages();
         });
 
         StartLiveMatchSyncTimer();
+        AnnouncePresenceAsync();
     }
 
     private void UpdatePlayerRolesAndHeaders()

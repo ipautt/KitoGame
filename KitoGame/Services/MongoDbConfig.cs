@@ -166,6 +166,31 @@ public class MongoDbService
         return false;
     }
 
+    public async Task<bool> PushChatMessageAsync(string challengeId, MatchChatMessage message)
+    {
+        if (MatchChallenges == null) return false;
+        for (int attempt = 1; attempt <= 3; attempt++)
+        {
+            try
+            {
+                var filter = Builders<MatchChallenge>.Filter.Eq(c => c.Id, challengeId);
+                var update = Builders<MatchChallenge>.Update.Push(c => c.ChatMessages, message);
+                var result = await MatchChallenges.UpdateOneAsync(filter, update);
+                if (result.IsAcknowledged)
+                {
+                    IsConnected = true;
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PushChatMessageAsync] Intento {attempt} falló: {ex.Message}");
+                if (attempt < 3) await Task.Delay(200 * attempt);
+            }
+        }
+        return false;
+    }
+
     public async Task UpsertChallengeAsync(MatchChallenge challenge)
     {
         if (MatchChallenges == null) return;

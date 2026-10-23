@@ -62,6 +62,19 @@
                                     HeightRequest="28"
                                     Padding="8,0"
                                     CornerRadius="6" />
+                            <Button x:Name="BtnMatchSettings"
+                                    Text="⚙️"
+                                    Clicked="OnMatchSettingsClicked"
+                                    BackgroundColor="#FEF3C7"
+                                    TextColor="#92400E"
+                                    BorderColor="#F59E0B"
+                                    BorderWidth="1.2"
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    HeightRequest="28"
+                                    WidthRequest="32"
+                                    Padding="0"
+                                    CornerRadius="6" />
                         </HorizontalStackLayout>
                     </Grid>
                 </VerticalStackLayout>
@@ -275,6 +288,122 @@
                            Text="Partida iniciada. Tú juegas con las fichas de abajo."
                            FontSize="12"
                            TextColor="#334155" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ========================================================================= -->
+            <!-- CHAT EN VIVO DE LA SALA (Saber cuándo entra el rival y comunicarse)       -->
+            <!-- ========================================================================= -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#CBD5E1"
+                    StrokeThickness="1.5"
+                    StrokeShape="RoundRectangle 14"
+                    Padding="12,10">
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                        <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                            <Label Text="💬 Chat en Vivo de la Sala"
+                                   FontSize="13"
+                                   FontAttributes="Bold"
+                                   TextColor="#1E293B"
+                                   VerticalOptions="Center" />
+                            <Label x:Name="LblChatCountBadge"
+                                   Text="0 mensajes"
+                                   FontSize="10"
+                                   TextColor="#64748B"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                        <Button x:Name="BtnToggleChat"
+                                Grid.Column="1"
+                                Text="Ocultar"
+                                Clicked="OnToggleChatClicked"
+                                BackgroundColor="Transparent"
+                                TextColor="#2563EB"
+                                FontSize="11"
+                                FontAttributes="Bold"
+                                HeightRequest="28"
+                                Padding="6,0" />
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="ChatBodyLayout" Spacing="8">
+                        <Border BackgroundColor="#F8FAFC"
+                                Stroke="#E2E8F0"
+                                StrokeShape="RoundRectangle 10"
+                                Padding="8"
+                                HeightRequest="130">
+                            <ScrollView x:Name="ChatScrollView">
+                                <VerticalStackLayout x:Name="ChatMessagesStack" Spacing="6">
+                                    <Label Text="Sala iniciada. Esperando mensajes..."
+                                           FontSize="11"
+                                           TextColor="#94A3B8"
+                                           HorizontalTextAlignment="Center" />
+                                </VerticalStackLayout>
+                            </ScrollView>
+                        </Border>
+
+                        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                            <HorizontalStackLayout Spacing="6">
+                                <Button Text="👋 ¡Hola!"
+                                        Clicked="OnQuickMessageClicked"
+                                        BackgroundColor="#EFF6FF"
+                                        TextColor="#1D4ED8"
+                                        FontSize="11"
+                                        FontAttributes="Bold"
+                                        HeightRequest="28"
+                                        Padding="8,0"
+                                        CornerRadius="6" />
+                                <Button Text="👍 ¡Buena jugada!"
+                                        Clicked="OnQuickMessageClicked"
+                                        BackgroundColor="#ECFDF5"
+                                        TextColor="#047857"
+                                        FontSize="11"
+                                        FontAttributes="Bold"
+                                        HeightRequest="28"
+                                        Padding="8,0"
+                                        CornerRadius="6" />
+                                <Button Text="⏳ Ya voy"
+                                        Clicked="OnQuickMessageClicked"
+                                        BackgroundColor="#FFFBEB"
+                                        TextColor="#B45309"
+                                        FontSize="11"
+                                        FontAttributes="Bold"
+                                        HeightRequest="28"
+                                        Padding="8,0"
+                                        CornerRadius="6" />
+                                <Button Text="🔥 ¡Buena partida!"
+                                        Clicked="OnQuickMessageClicked"
+                                        BackgroundColor="#FEF2F2"
+                                        TextColor="#B91C1C"
+                                        FontSize="11"
+                                        FontAttributes="Bold"
+                                        HeightRequest="28"
+                                        Padding="8,0"
+                                        CornerRadius="6" />
+                            </HorizontalStackLayout>
+                        </ScrollView>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Entry x:Name="TxtChatMessage"
+                                   Grid.Column="0"
+                                   Placeholder="Escribe al contrincante..."
+                                   FontSize="12"
+                                   BackgroundColor="#F1F5F9"
+                                   TextColor="#1E293B"
+                                   HeightRequest="38"
+                                   Completed="OnSendChatMessageClicked" />
+                            <Button x:Name="BtnSendChat"
+                                    Grid.Column="1"
+                                    Text="Enviar"
+                                    Clicked="OnSendChatMessageClicked"
+                                    BackgroundColor="#2563EB"
+                                    TextColor="#FFFFFF"
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    HeightRequest="38"
+                                    Padding="14,0"
+                                    CornerRadius="8" />
+                        </Grid>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
 

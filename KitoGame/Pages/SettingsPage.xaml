@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KitoGame.Pages.SettingsPage"
+             Title="Configuración"
+             BackgroundColor="#FAF5E8">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="18,16,18,36" Spacing="16" MaximumWidthRequest="540" HorizontalOptions="Fill">
+
+            <!-- Cabecera de Configuración -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#F59E0B"
+                    StrokeThickness="2"
+                    StrokeShape="RoundRectangle 18"
+                    Padding="16,14">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                    <Border BackgroundColor="#FEF3C7"
+                            Stroke="#F59E0B"
+                            StrokeThickness="1.5"
+                            StrokeShape="RoundRectangle 22"
+                            WidthRequest="46"
+                            HeightRequest="46"
+                            VerticalOptions="Center">
+                        <Label Text="⚙️" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                        <Label Text="Configuración y Preferencias"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               TextColor="#1E293B" />
+                        <Label Text="Personaliza vibraciones, sonidos y alertas"
+                               FontSize="12"
+                               TextColor="#64748B" />
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+
+            <!-- Sección: Vibración de Turno -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#E2E8F0"
+                    StrokeThickness="1.5"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="16">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="📳 VIBRACIÓN DE PARTIDA"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="#B45309" />
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                        <VerticalStackLayout Grid.Column="0" Spacing="3">
+                            <Label Text="Vibrar cada vez que sea mi turno"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#1E293B" />
+                            <Label Text="Tu celular vibrará para avisarte cuando tu contrincante haya terminado de mover su ficha."
+                                   FontSize="11"
+                                   TextColor="#64748B" />
+                        </VerticalStackLayout>
+                        <Switch x:Name="SwitchTurnVibration"
+                                Grid.Column="1"
+                                OnColor="#10B981"
+                                ThumbColor="#FFFFFF"
+                                Toggled="OnTurnVibrationToggled"
+                                VerticalOptions="Center" />
+                    </Grid>
+
+                    <Button x:Name="BtnTestVibration"
+                            Text="📳 Probar Vibración Ahora"
+                            Clicked="OnTestVibrationClicked"
+                            BackgroundColor="#FEF3C7"
+                            TextColor="#92400E"
+                            BorderColor="#F59E0B"
+                            BorderWidth="1.5"
+                            FontAttributes="Bold"
+                            FontSize="12"
+                            HeightRequest="38"
+                            CornerRadius="10" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Sección: Sonido de Notificaciones -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#E2E8F0"
+                    StrokeThickness="1.5"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="16">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="🔔 SONIDO Y ALERTAS"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="#B45309" />
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                        <VerticalStackLayout Grid.Column="0" Spacing="3">
+                            <Label Text="Sonido para retos y chat"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#1E293B" />
+                            <Label Text="Emite un sonido y vibración suave al recibir invitaciones o cuando tu rival envía un mensaje en el chat."
+                                   FontSize="11"
+                                   TextColor="#64748B" />
+                        </VerticalStackLayout>
+                        <Switch x:Name="SwitchNotificationSound"
+                                Grid.Column="1"
+                                OnColor="#10B981"
+                                ThumbColor="#FFFFFF"
+                                Toggled="OnNotificationSoundToggled"
+                                VerticalOptions="Center" />
+                    </Grid>
+
+                    <Button x:Name="BtnTestSound"
+                            Text="🔔 Probar Sonido y Alerta"
+                            Clicked="OnTestSoundClicked"
+                            BackgroundColor="#ECFDF5"
+                            TextColor="#047857"
+                            BorderColor="#10B981"
+                            BorderWidth="1.5"
+                            FontAttributes="Bold"
+                            FontSize="12"
+                            HeightRequest="38"
+                            CornerRadius="10" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Sección: Idioma de la Aplicación -->
+            <Border BackgroundColor="#FFFFFF"
+                    Stroke="#E2E8F0"
+                    StrokeThickness="1.5"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="16">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🌐 IDIOMA / LANGUAGE"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="#B45309" />
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Button x:Name="BtnLangEs"
+                                Grid.Column="0"
+                                Text="🇪🇸 Español"
+                                Clicked="OnLangEsClicked"
+                                BackgroundColor="#F59E0B"
+                                TextColor="#1E293B"
+                                BorderColor="#D97706"
+                                BorderWidth="1.5"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="38"
+                                CornerRadius="10" />
+
+                        <Button x:Name="BtnLangEn"
+                                Grid.Column="1"
+                                Text="🇺🇸 English"
+                                Clicked="OnLangEnClicked"
+                                BackgroundColor="#FFFFFF"
+                                TextColor="#475569"
+                                BorderColor="#CBD5E1"
+                                BorderWidth="1.5"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="38"
+                                CornerRadius="10" />
+
+                        <Button x:Name="BtnLangPt"
+                                Grid.Column="2"
+                                Text="🇧🇷 Português"
+                                Clicked="OnLangPtClicked"
+                                BackgroundColor="#FFFFFF"
+                                TextColor="#475569"
+                                BorderColor="#CBD5E1"
+                                BorderWidth="1.5"
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                HeightRequest="38"
+                                CornerRadius="10" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Botón Volver -->
+            <Button Text="✅ Guardar y Volver"
+                    Clicked="OnBackClicked"
+                    BackgroundColor="#F59E0B"
+                    TextColor="#1E293B"
+                    BorderColor="#D97706"
+                    BorderWidth="1.5"
+                    FontAttributes="Bold"
+                    FontSize="14"
+                    HeightRequest="44"
+                    CornerRadius="12" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+
