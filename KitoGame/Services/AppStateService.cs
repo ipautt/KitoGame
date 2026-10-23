@@ -25,6 +25,7 @@ public class TemporaryDatabaseSchema
 public class AppStateService
 {
     private readonly string _dbFilePath;
+    private readonly object _dbLock = new();
     private TemporaryDatabaseSchema _db = new();
 
     public GameRegistry GameRegistry { get; }
@@ -819,15 +820,26 @@ public class AppStateService
         return (true, $"¡Apuesta igualada contra {challenge.CreatorUsername}! Pozo total en custodia: ${challenge.TotalPot:N0} COP.");
     }
 
-    public async Task RecordMoveAndSyncAsync(string challengeId, BoardPosition from, BoardPosition to)
+    public async Task<bool> RecordMoveAndSyncAsync(string challengeId, BoardPosition from, BoardPosition to)
     {
-        var challenge = _db.MatchChallengesTable.FirstOrDefault(c => c.Id == challengeId);
-        if (challenge == null) return;
-
         string moveToken = $"{from.Row},{from.Col}->{to.Row},{to.Col}";
-        challenge.SerializedMoves.Add(moveToken);
-        SaveDatabase();
-        await MongoDb.UpsertChallengeAsync(challenge);
+
+        lock (_dbLock)
+        {
+            var challenge = _db.MatchChallengesTable.FirstOrDefault(c => c.Id == challengeId);
+            if (challenge != null)
+            {
+                if (!challenge.SerializedMoves.Contains(moveToken))
+                {
+                    challenge.SerializedMoves.Add(moveToken);
+                }
+                SaveDatabase();
+            }
+        }
+
+        // PUSH atómico a MongoDB Atlas con reintento automático
+        bool ok = await MongoDb.PushChallengeMoveAsync(challengeId, moveToken);
+        return ok;
     }
 
     public async Task<MatchChallenge?> PullLiveChallengeStateAsync(string challengeId)
@@ -835,18 +847,33 @@ public class AppStateService
         var remote = await MongoDb.GetChallengeByIdAsync(challengeId);
         if (remote != null)
         {
-            var idx = _db.MatchChallengesTable.FindIndex(c => c.Id == challengeId);
-            if (idx >= 0)
+            lock (_dbLock)
             {
-                _db.MatchChallengesTable[idx] = remote;
-            }
-            else
-            {
-                _db.MatchChallengesTable.Add(remote);
+                var idx = _db.MatchChallengesTable.FindIndex(c => c.Id == challengeId);
+                if (idx >= 0)
+                {
+                    var local = _db.MatchChallengesTable[idx];
+                    // Si el dispositivo local tiene jugadas que aún no han impactado Atlas (ej: por latencia de red móvil),
+                    // protegemos las jugadas locales para que no sean sobreescritas por el documento antiguo de la nube.
+                    if (local.SerializedMoves.Count > remote.SerializedMoves.Count)
+                    {
+                        var merged = new List<string>(local.SerializedMoves);
+                        remote.SerializedMoves = merged;
+                    }
+                    _db.MatchChallengesTable[idx] = remote;
+                }
+                else
+                {
+                    _db.MatchChallengesTable.Add(remote);
+                }
             }
             return remote;
         }
-        return _db.MatchChallengesTable.FirstOrDefault(c => c.Id == challengeId);
+
+        lock (_dbLock)
+        {
+            return _db.MatchChallengesTable.FirstOrDefault(c => c.Id == challengeId);
+        }
     }
 
     public (bool Success, string SummaryMessage) SettleMatchResult(string challengeId, PlayerSide winnerSide, bool isDraw)

@@ -157,7 +157,29 @@ public partial class GameMatchPage : ContentPage
         BtnManualSync.Text = "⏳...";
         try
         {
+            var fresh = await _appState.MongoDb.GetChallengeByIdAsync(_challengeId);
+            if (fresh != null)
+            {
+                _challenge = fresh;
+                if (_engine != null)
+                {
+                    _engine.ResetBoard();
+                    _appliedMoveCount = 0;
+                    foreach (var m in _challenge.SerializedMoves)
+                    {
+                        if (TryParseMoveToken(m, out var f, out var t))
+                        {
+                            _engine.TryMakeMove(f, t);
+                        }
+                        _appliedMoveCount++;
+                    }
+                }
+            }
             await SyncLiveMatchFromCloudAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OnManualSyncClicked] Error: {ex.Message}");
         }
         finally
         {
@@ -389,7 +411,15 @@ public partial class GameMatchPage : ContentPage
 
             // Sincronizar jugada inmediatamente en MongoDB Atlas para que el otro celular la vea en vivo
             _appliedMoveCount++;
-            await _appState.RecordMoveAndSyncAsync(_challenge.Id, fromCell, pos);
+            bool pushOk = await _appState.RecordMoveAndSyncAsync(_challenge.Id, fromCell, pos);
+            if (!pushOk)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    LblConnectionStatus.Text = "⚠️ Reintentando...";
+                    LblConnectionStatus.TextColor = Color.FromArgb("#D97706");
+                });
+            }
 
             if (_engine.IsGameOver)
             {

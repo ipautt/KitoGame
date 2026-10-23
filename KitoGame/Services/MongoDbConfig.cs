@@ -141,16 +141,47 @@ public class MongoDbService
         }
     }
 
+    public async Task<bool> PushChallengeMoveAsync(string challengeId, string moveToken)
+    {
+        if (MatchChallenges == null) return false;
+        for (int attempt = 1; attempt <= 3; attempt++)
+        {
+            try
+            {
+                var filter = Builders<MatchChallenge>.Filter.Eq(c => c.Id, challengeId);
+                var update = Builders<MatchChallenge>.Update.Push(c => c.SerializedMoves, moveToken);
+                var result = await MatchChallenges.UpdateOneAsync(filter, update);
+                if (result.IsAcknowledged)
+                {
+                    IsConnected = true;
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PushChallengeMoveAsync] Intento {attempt} falló: {ex.Message}");
+                if (attempt < 3) await Task.Delay(200 * attempt);
+            }
+        }
+        return false;
+    }
+
     public async Task UpsertChallengeAsync(MatchChallenge challenge)
     {
         if (MatchChallenges == null) return;
-        try
+        for (int attempt = 1; attempt <= 3; attempt++)
         {
-            await MatchChallenges.ReplaceOneAsync(c => c.Id == challenge.Id, challenge, new ReplaceOptions { IsUpsert = true });
-            IsConnected = true;
-        }
-        catch
-        {
+            try
+            {
+                await MatchChallenges.ReplaceOneAsync(c => c.Id == challenge.Id, challenge, new ReplaceOptions { IsUpsert = true });
+                IsConnected = true;
+                return;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpsertChallengeAsync] Intento {attempt} falló: {ex.Message}");
+                if (attempt < 3) await Task.Delay(200 * attempt);
+            }
         }
     }
 
