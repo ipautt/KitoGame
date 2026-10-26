@@ -26,6 +26,13 @@ public class SystemConfig
     public bool MaintenanceMode { get; set; } = false;
     public string MaintenanceMessage { get; set; } = "KitoGame se encuentra en mantenimiento programado. Volvemos en breve.";
 
+    // Catálogo de Juegos Habilitados/Deshabilitados
+    public List<string> DisabledGameIds { get; set; } = new();
+
+    // Módulo de Pagos Automáticos y Retiros (Nequi / Daviplata)
+    public bool AutoPaymentsModuleEnabled { get; set; } = false;
+    public int WithdrawalHoldHours { get; set; } = 48;
+
     // Auditoría
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string UpdatedBy { get; set; } = "admin";

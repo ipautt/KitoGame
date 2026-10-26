@@ -11,6 +11,26 @@
     </div>
 </div>
 
+<!-- Banner Informativo del Módulo de Pagos Automáticos -->
+<div class="card-custom mb-4 border-start border-4 border-warning bg-opacity-10 bg-dark">
+    <div class="d-flex align-items-start gap-3">
+        <i class="fa-solid fa-shield-halved text-warning fs-3 mt-1"></i>
+        <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h6 class="fw-bold text-white mb-1">Módulo de Verificación Automatizada (Nequi / Daviplata)</h6>
+                <span class="badge bg-secondary text-light"><i class="fa-solid fa-lock me-1"></i> Deshabilitado Temporalmente</span>
+            </div>
+            <p class="small text-secondary mb-2">
+                Este módulo está programado para verificar en segundo plano la recepción efectiva de transferencias antes de su confirmación, evitando devoluciones o fraudes.
+            </p>
+            <div class="d-flex flex-wrap gap-3 small text-muted">
+                <span><i class="fa-solid fa-hourglass-start text-warning me-1"></i> <strong>Tiempo de espera antifraude:</strong> Ventana de espera mínima para confirmar entrada no reversible.</span>
+                <span><i class="fa-solid fa-calendar-days text-info me-1"></i> <strong>Política de retiros:</strong> Desembolsos ejecutados a los 2 días (48 hrs) de la solicitud a cuentas Nequi / Daviplata.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Filtros por Estado -->
 <div class="d-flex gap-2 mb-4 flex-wrap">
     <a href="/Payments" class="btn btn-sm @(Model.StatusFilter == null ? "btn-gold" : "btn-secondary-custom")">

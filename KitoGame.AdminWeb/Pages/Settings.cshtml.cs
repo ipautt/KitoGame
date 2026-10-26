@@ -12,6 +12,15 @@ public class SettingsModel : PageModel
     [BindProperty]
     public SystemConfig Config { get; set; } = new();
 
+    [BindProperty]
+    public bool CheckersEnabled { get; set; } = true;
+
+    [BindProperty]
+    public bool ChessEnabled { get; set; } = true;
+
+    [BindProperty]
+    public bool ParchisEnabled { get; set; } = true;
+
     public bool IsConnected => _dataService.IsConnected;
     public string ConnectionStatusMessage => _dataService.ConnectionStatusMessage;
 
@@ -23,6 +32,9 @@ public class SettingsModel : PageModel
     public void OnGet()
     {
         Config = _dataService.CurrentConfig;
+        CheckersEnabled = !Config.DisabledGameIds.Contains("checkers");
+        ChessEnabled = !Config.DisabledGameIds.Contains("chess");
+        ParchisEnabled = !Config.DisabledGameIds.Contains("parchis");
     }
 
     public async Task<IActionResult> OnPostSaveDatabaseAsync()
@@ -56,6 +68,14 @@ public class SettingsModel : PageModel
         current.MaxBetAmount = Config.MaxBetAmount;
         current.MaintenanceMode = Config.MaintenanceMode;
         current.MaintenanceMessage = Config.MaintenanceMessage;
+
+        current.DisabledGameIds = new List<string>();
+        if (!CheckersEnabled) current.DisabledGameIds.Add("checkers");
+        if (!ChessEnabled) current.DisabledGameIds.Add("chess");
+        if (!ParchisEnabled) current.DisabledGameIds.Add("parchis");
+
+        current.AutoPaymentsModuleEnabled = Config.AutoPaymentsModuleEnabled;
+        current.WithdrawalHoldHours = Config.WithdrawalHoldHours > 0 ? Config.WithdrawalHoldHours : 48;
 
         var res = await _dataService.UpdateDatabaseConfigAsync(current, admin);
 

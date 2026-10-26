@@ -65,6 +65,7 @@ public class BoardCanvasDrawable : IDrawable
         if (Engine == null) return;
 
         bool isCheckers = Engine.Metadata.Id.Equals("checkers", StringComparison.OrdinalIgnoreCase);
+        bool isParchis = Engine.Metadata.Id.Equals("parchis", StringComparison.OrdinalIgnoreCase);
 
         // 2. Dibujar las 64 casillas
         for (int r = 0; r < 8; r++)
@@ -77,7 +78,23 @@ public class BoardCanvasDrawable : IDrawable
 
                 bool isDark = (r + c) % 2 == 1;
 
-                if (isCheckers)
+                if (isParchis)
+                {
+                    // Casas de Parchís en las esquinas y meta central
+                    if (r >= 5 && c <= 2)
+                        canvas.FillColor = isDark ? Color.FromArgb("#FCA5A5") : Color.FromArgb("#FEF2F2"); // Casa Roja (P1)
+                    else if (r <= 2 && c >= 5)
+                        canvas.FillColor = isDark ? Color.FromArgb("#86EFAC") : Color.FromArgb("#F0FDF4"); // Casa Verde (P2)
+                    else if (r <= 2 && c <= 2)
+                        canvas.FillColor = isDark ? Color.FromArgb("#FDE047") : Color.FromArgb("#FEFCE8"); // Casa Amarilla
+                    else if (r >= 5 && c >= 5)
+                        canvas.FillColor = isDark ? Color.FromArgb("#93C5FD") : Color.FromArgb("#EFF6FF"); // Casa Azul
+                    else if ((r == 3 || r == 4) && (c == 3 || c == 4))
+                        canvas.FillColor = Color.FromArgb("#F59E0B"); // Meta Central 🏆
+                    else
+                        canvas.FillColor = isDark ? Color.FromArgb("#CBD5E1") : Color.FromArgb("#F8FAFC"); // Pistas
+                }
+                else if (isCheckers)
                 {
                     canvas.FillColor = isDark
                         ? Color.FromArgb("#273549")
@@ -139,7 +156,11 @@ public class BoardCanvasDrawable : IDrawable
                 var piece = Engine.GetPieceAt(pos);
                 if (piece != null)
                 {
-                    if (isCheckers)
+                    if (isParchis)
+                    {
+                        DrawParchisToken(canvas, x, y, cellSize, piece);
+                    }
+                    else if (isCheckers)
                     {
                         DrawCheckerDisc3D(canvas, x, y, cellSize, piece);
                     }
@@ -150,6 +171,43 @@ public class BoardCanvasDrawable : IDrawable
                 }
             }
         }
+    }
+
+    private static void DrawParchisToken(ICanvas canvas, float x, float y, float cellSize, BoardPiece piece)
+    {
+        float cx = x + cellSize / 2f;
+        float cy = y + cellSize / 2f;
+        float radius = cellSize * 0.38f;
+
+        bool isP1 = piece.Owner == PlayerSide.Player1;
+        Color baseColor = isP1 ? Color.FromArgb("#EF4444") : Color.FromArgb("#10B981");
+        Color darkColor = isP1 ? Color.FromArgb("#991B1B") : Color.FromArgb("#065F46");
+        Color lightColor = isP1 ? Color.FromArgb("#FCA5A5") : Color.FromArgb("#A7F3D0");
+
+        // Sombra
+        canvas.FillColor = Color.FromRgba(0, 0, 0, 110);
+        canvas.FillCircle(cx + 1.5f, cy + 2.5f, radius);
+
+        // Base 3D
+        canvas.FillColor = darkColor;
+        canvas.FillCircle(cx, cy + 2f, radius);
+
+        // Cuerpo superior
+        canvas.FillColor = baseColor;
+        canvas.FillCircle(cx, cy - 1f, radius * 0.92f);
+
+        // Anillo de brillo
+        canvas.StrokeColor = lightColor;
+        canvas.StrokeSize = 2f;
+        canvas.DrawCircle(cx, cy - 1f, radius * 0.82f);
+
+        // Cúpula del peón de parchís
+        canvas.FillColor = Colors.White;
+        canvas.FillCircle(cx, cy - 1f, radius * 0.35f);
+
+        canvas.FontColor = darkColor;
+        canvas.FontSize = cellSize * 0.30f;
+        canvas.DrawString(isP1 ? "🔴" : "🟢", cx - radius, cy - radius - 1f, radius * 2, radius * 2, HorizontalAlignment.Center, VerticalAlignment.Center);
     }
 
     private static void DrawCheckerDisc3D(ICanvas canvas, float x, float y, float cellSize, BoardPiece piece)

@@ -1,5 +1,6 @@
 using KitoGame.Engine.Checkers;
 using KitoGame.Engine.Chess;
+using KitoGame.Engine.Parchis;
 using KitoGame.Models;
 
 namespace KitoGame.Engine;
@@ -18,6 +19,7 @@ public class GameRegistry
     {
         RegisterGame(() => new CheckersEngine());
         RegisterGame(() => new ChessEngine());
+        RegisterGame(() => new ParchisEngine());
     }
 
     public void RegisterGame(Func<IGameEngine> engineFactory)
@@ -29,6 +31,17 @@ public class GameRegistry
 
     public IReadOnlyList<GameMetadata> GetAvailableGames() =>
         _metadata.Values.Where(g => g.IsEnabled).ToList();
+
+    public IReadOnlyList<GameMetadata> GetAllGames() =>
+        _metadata.Values.ToList();
+
+    public void SetGameStatus(string gameId, bool isEnabled)
+    {
+        if (_metadata.TryGetValue(gameId, out var meta))
+        {
+            meta.IsEnabled = isEnabled;
+        }
+    }
 
     public GameMetadata? GetGameMetadata(string gameId) =>
         _metadata.TryGetValue(gameId, out var meta) ? meta : null;

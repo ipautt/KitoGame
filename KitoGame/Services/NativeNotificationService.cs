@@ -8,7 +8,7 @@ namespace KitoGame.Services;
 /// </summary>
 public static class NativeNotificationService
 {
-    private const string ChannelId = "kitogame_alerts_high_v1";
+    private const string ChannelId = "kitogame_alerts_v2";
     private const string ChannelName = "Retos y Alertas de KitoGame";
     private static int _notificationIdCounter = 1000;
 
@@ -31,6 +31,18 @@ public static class NativeNotificationService
                         Description = "Notificaciones de retos recibidos y jugadores buscando rival"
                     };
                     channel.EnableVibration(true);
+                    channel.SetVibrationPattern(new long[] { 0, 300, 200, 300 });
+
+                    var soundUri = Android.Media.RingtoneManager.GetDefaultUri(Android.Media.RingtoneType.Notification);
+                    if (soundUri != null)
+                    {
+                        var audioAttrs = new Android.Media.AudioAttributes.Builder()
+                            .SetUsage(Android.Media.AudioUsageKind.Notification)
+                            .SetContentType(Android.Media.AudioContentType.Sonification)
+                            .Build();
+                        channel.SetSound(soundUri, audioAttrs);
+                    }
+
                     manager.CreateNotificationChannel(channel);
                 }
             }

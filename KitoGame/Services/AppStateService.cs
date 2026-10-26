@@ -84,55 +84,19 @@ public class AppStateService
     public void TriggerTurnVibration()
     {
         if (!VibrationOnTurnEnabled) return;
-        try
-        {
-            if (Vibration.Default.IsSupported)
-            {
-                Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(450));
-            }
-            else
-            {
-                HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[TriggerTurnVibration] Error: {ex.Message}");
-        }
+        DeviceFeedbackService.Vibrate(450);
     }
 
     public void PlayNotificationSoundAndVibrate()
     {
         if (NotificationSoundEnabled)
         {
-            try
-            {
-#if ANDROID
-                var uri = Android.Media.RingtoneManager.GetDefaultUri(Android.Media.RingtoneType.Notification);
-                var ringtone = Android.Media.RingtoneManager.GetRingtone(Android.App.Application.Context, uri);
-                ringtone?.Play();
-#endif
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[PlayNotificationSound] Error: {ex.Message}");
-            }
+            DeviceFeedbackService.PlayNotificationSound();
         }
 
         if (VibrationOnTurnEnabled)
         {
-            try
-            {
-                if (Vibration.Default.IsSupported)
-                {
-                    Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(300));
-                }
-                else
-                {
-                    HapticFeedback.Default.Perform(HapticFeedbackType.Click);
-                }
-            }
-            catch { }
+            DeviceFeedbackService.Vibrate(350);
         }
     }
 
@@ -1275,6 +1239,16 @@ public class AppStateService
                 {
                     _db.CommissionPercentage = remoteSettings.CommissionPercentage;
                     _db.PlatformTreasuryBalance = Math.Max(_db.PlatformTreasuryBalance, remoteSettings.PlatformTreasuryBalance);
+
+                    // Sincronizar catálogo de juegos habilitados / deshabilitados desde MongoDB Atlas / AdminWeb
+                    if (remoteSettings.DisabledGameIds != null)
+                    {
+                        foreach (var g in GameRegistry.GetAllGames())
+                        {
+                            bool isDisabled = remoteSettings.DisabledGameIds.Contains(g.Id, StringComparer.OrdinalIgnoreCase);
+                            GameRegistry.SetGameStatus(g.Id, !isDisabled);
+                        }
+                    }
                 }
                 else
                 {

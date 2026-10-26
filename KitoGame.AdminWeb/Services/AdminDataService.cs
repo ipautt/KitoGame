@@ -117,6 +117,7 @@ public class AdminDataService
     public IMongoCollection<WalletTransaction>? TransactionsCollection => _database?.GetCollection<WalletTransaction>("wallet_transactions");
     public IMongoCollection<MatchChallenge>? ChallengesCollection => _database?.GetCollection<MatchChallenge>("match_challenges");
     public IMongoCollection<SystemConfig>? ConfigCollection => _database?.GetCollection<SystemConfig>("system_config");
+    public IMongoCollection<BsonDocument>? PlatformSettingsCollection => _database?.GetCollection<BsonDocument>("platform_settings");
     public IMongoCollection<AuditLog>? AuditLogsCollection => _database?.GetCollection<AuditLog>("audit_logs");
 
     public async Task<DashboardStats> GetDashboardStatsAsync()
@@ -475,6 +476,24 @@ public class AdminDataService
                 await ConfigCollection.ReplaceOneAsync(
                     c => c.Id == newConfig.Id,
                     newConfig,
+                    new ReplaceOptions { IsUpsert = true });
+            }
+
+            if (PlatformSettingsCollection != null)
+            {
+                var doc = new BsonDocument
+                {
+                    { "_id", "global_settings" },
+                    { "CommissionPercentage", (double)newConfig.CommissionPercentage },
+                    { "PlatformTreasuryBalance", 0.0 },
+                    { "DisabledGameIds", new BsonArray(newConfig.DisabledGameIds ?? new List<string>()) },
+                    { "AutoPaymentsModuleEnabled", newConfig.AutoPaymentsModuleEnabled },
+                    { "WithdrawalHoldHours", newConfig.WithdrawalHoldHours },
+                    { "UpdatedAt", DateTime.UtcNow }
+                };
+                await PlatformSettingsCollection.ReplaceOneAsync(
+                    new BsonDocument("_id", "global_settings"),
+                    doc,
                     new ReplaceOptions { IsUpsert = true });
             }
 

@@ -23,6 +23,9 @@ public class PlatformSettingsDocument
     public string Id { get; set; } = "global_settings";
     public decimal CommissionPercentage { get; set; } = 10m;
     public decimal PlatformTreasuryBalance { get; set; } = 0m;
+    public List<string> DisabledGameIds { get; set; } = new();
+    public bool AutoPaymentsModuleEnabled { get; set; } = false;
+    public int WithdrawalHoldHours { get; set; } = 48;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
@@ -249,16 +252,20 @@ public class MongoDbService
         }
     }
 
-    public async Task UpsertSettingsAsync(decimal commissionPercentage, decimal treasuryBalance)
+    public async Task UpsertSettingsAsync(decimal commissionPercentage, decimal treasuryBalance, List<string>? disabledGameIds = null, bool? autoPayments = null, int? withdrawalHoldHours = null)
     {
         if (PlatformSettings == null) return;
         try
         {
+            var existing = await PlatformSettings.Find(s => s.Id == "global_settings").FirstOrDefaultAsync();
             var doc = new PlatformSettingsDocument
             {
                 Id = "global_settings",
                 CommissionPercentage = commissionPercentage,
                 PlatformTreasuryBalance = treasuryBalance,
+                DisabledGameIds = disabledGameIds ?? existing?.DisabledGameIds ?? new List<string>(),
+                AutoPaymentsModuleEnabled = autoPayments ?? existing?.AutoPaymentsModuleEnabled ?? false,
+                WithdrawalHoldHours = withdrawalHoldHours ?? existing?.WithdrawalHoldHours ?? 48,
                 UpdatedAt = DateTime.UtcNow
             };
             await PlatformSettings.ReplaceOneAsync(s => s.Id == "global_settings", doc, new ReplaceOptions { IsUpsert = true });

@@ -32,6 +32,7 @@ bld/
 *.keystore
 *.jks
 *.apk
+*.aab
 DOCUMENTACION_PRIVADA_KITOGAME.md
 admin_db_config.json
 *.secrets.json

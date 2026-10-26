@@ -63,17 +63,16 @@
                                     Padding="8,0"
                                     CornerRadius="6" />
                             <Button x:Name="BtnMatchSettings"
-                                    Text="⚙️"
+                                    Text="⚙ Ajustes"
                                     Clicked="OnMatchSettingsClicked"
                                     BackgroundColor="#FEF3C7"
                                     TextColor="#92400E"
                                     BorderColor="#F59E0B"
                                     BorderWidth="1.2"
                                     FontAttributes="Bold"
-                                    FontSize="12"
+                                    FontSize="10"
                                     HeightRequest="28"
-                                    WidthRequest="32"
-                                    Padding="0"
+                                    Padding="6,0"
                                     CornerRadius="6" />
                         </HorizontalStackLayout>
                     </Grid>
