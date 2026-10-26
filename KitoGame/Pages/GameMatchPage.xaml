@@ -172,39 +172,56 @@
                     StrokeShape="RoundRectangle 14"
                     Padding="12,8">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
-                    <!-- Dado 3D con Puntos Grandes -->
-                    <Border Grid.Column="0"
-                            x:Name="ParchisDiceBox"
-                            WidthRequest="50"
-                            HeightRequest="50"
-                            BackgroundColor="#FFFFFF"
-                            Stroke="#D97706"
-                            StrokeThickness="2.5"
-                            StrokeShape="RoundRectangle 12"
-                            HorizontalOptions="Center"
-                            VerticalOptions="Center">
-                        <Label x:Name="LblDiceGlyph"
-                               Text="⚄"
-                               FontSize="34"
-                               TextColor="#DC2626"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center" />
-                    </Border>
+                    <!-- Dos Dados 3D de Parqués con Puntos Grandes -->
+                    <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                        <Border x:Name="ParchisDiceBox1"
+                                WidthRequest="44"
+                                HeightRequest="44"
+                                BackgroundColor="#FFFFFF"
+                                Stroke="#D97706"
+                                StrokeThickness="2.5"
+                                StrokeShape="RoundRectangle 10"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center">
+                            <Label x:Name="LblDice1Glyph"
+                                   Text="⚀"
+                                   FontSize="28"
+                                   TextColor="#DC2626"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+                        <Border x:Name="ParchisDiceBox2"
+                                WidthRequest="44"
+                                HeightRequest="44"
+                                BackgroundColor="#FFFFFF"
+                                Stroke="#D97706"
+                                StrokeThickness="2.5"
+                                StrokeShape="RoundRectangle 10"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center">
+                            <Label x:Name="LblDice2Glyph"
+                                   Text="⚀"
+                                   FontSize="28"
+                                   TextColor="#DC2626"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+                    </HorizontalStackLayout>
 
-                    <!-- Mensaje del Dado y Bonificaciones -->
+                    <!-- Mensaje de los Dados y Bonificaciones -->
                     <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
                         <Label x:Name="LblParchisDiceStatus"
-                               Text="DADO: 5 🎲"
-                               FontSize="14"
+                               Text="DADOS: 1 + 1 = 2 🎲"
+                               FontSize="13"
                                FontAttributes="Bold"
                                TextColor="#F59E0B" />
                         <Label x:Name="LblParchisDiceSub"
-                               Text="Toca 'Lanzar' para obtener tu número"
+                               Text="Toca '🎲 Tirar' para lanzar los 2 dados"
                                FontSize="11"
                                TextColor="#E2E8F0" />
                     </VerticalStackLayout>
 
-                    <!-- Botón de Lanzar Dado -->
+                    <!-- Botón de Lanzar Dados -->
                     <Button Grid.Column="2"
                             x:Name="BtnRollDice"
                             Text="🎲 Tirar"

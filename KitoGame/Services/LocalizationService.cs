@@ -97,11 +97,11 @@ public class LocalizationService
             "El clásico rey de la estrategia 1v1. Captura al Rey rival para llevarte el pozo.",
             "The classic 1v1 strategy game. Capture the rival King to win the pot.",
             "O clássico jogo de estratégia 1v1. Capture o Rei rival para levar o prêmio."),
-        ["GameParchisName"] = ("Parchís Clásico", "Classic Parchis / Ludo", "Parchís / Ludo Clássico"),
+        ["GameParchisName"] = ("Parqués / Parchís", "Parqués / Parchis", "Parqués / Parchís"),
         ["GameParchisDesc"] = (
-            "El rey de los juegos de mesa. Lleva tus 4 fichas a la meta central con el dado. ¡Captura y avanza 20 casillas!",
-            "The classic board game. Race your 4 pawns to the center goal with the dice. Capture to advance 20 spaces!",
-            "O clássico jogo de tabuleiro. Leve seus 4 peões à meta central com o dado. Capture para avançar 20 casas!"),
+            "El clásico juego de mesa con 2 dados. Saca pares para salir de la cárcel, come fichas rivales y corona en el cielo.",
+            "The classic 2-dice board game. Roll doubles to leave jail, capture opponents and crown in the center.",
+            "O clássico jogo de tabuleiro com 2 dados. Tire pares para sair da prisão, capture rivais e coroe no centro."),
 
         // Perfil
         ["ProfileTitle"] = ("Mi Perfil de Usuario", "My User Profile", "Meu Perfil de Usuário"),

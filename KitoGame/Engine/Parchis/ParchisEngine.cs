@@ -27,10 +27,10 @@ public class ParchisEngine : IGameEngine
     public GameMetadata Metadata { get; } = new()
     {
         Id = "parchis",
-        Name = "Parchís Clásico",
+        Name = "Parqués / Parchís",
         Icon = "🎲",
-        ShortDescription = "El clásico rey de los juegos de mesa (2 a 4 jugadores). Sal con 5, come fichas para ganar +20 y llega a la meta para ganar +10.",
-        RulesSummary = "Tira el dado (1-6). Saca 5 para salir de la cárcel. Con 6 repites tiro. Si comes una ficha rival ganas +20 casillas de bonificación. Al meter una ficha a la meta ganas +10. Gana quien corone sus 4 fichas.",
+        ShortDescription = "El clásico juego tradicional colombiano de dos dados. Saca pares para salir de la cárcel, repite tiro, aplasta fichas rivales y corona el cielo.",
+        RulesSummary = "Se juega con 2 dados. Si todas tus fichas están en la cárcel tienes hasta 3 tiros para sacar pares (1-1, 2-2, etc.). Al sacar pares, sales de la cárcel y repites tiro. Mueve sumando los dados. Al comer una ficha rival la mandas a la cárcel y ganas +20 casillas de bonificación. Al coronar en la meta ganas +10. Gana quien corone sus 4 fichas.",
         MinBet = 1000m,
         AccentColorHex = "#F59E0B"
     };
@@ -42,7 +42,7 @@ public class ParchisEngine : IGameEngine
     public bool IsGameOver { get; private set; }
     public PlayerSide Winner { get; private set; } = PlayerSide.None;
     public bool IsDraw { get; private set; }
-    public string StatusMessage { get; private set; } = "🎲 ¡Bienvenido al Parchís! Toca 'Lanzar Dado' para iniciar tu turno.";
+    public string StatusMessage { get; private set; } = "🎲 ¡Bienvenido al Parqués! Toca '🎲 Tirar' para lanzar los 2 dados.";
     public List<string> MoveHistory { get; } = new();
 
     public BoardPosition? LastMoveFrom { get; private set; }
@@ -52,7 +52,14 @@ public class ParchisEngine : IGameEngine
     public int Player1PiecesCount => _tokens.Count(t => t.Owner == PlayerSide.Player1 && !t.IsInGoal);
     public int Player2PiecesCount => _tokens.Count(t => t.Owner == PlayerSide.Player2 && !t.IsInGoal);
 
-    public int CurrentDiceValue { get; private set; } = 5;
+    // Sistema de 2 Dados oficiales de Parqués
+    public int Dice1 { get; private set; } = 1;
+    public int Dice2 { get; private set; } = 1;
+    public int CurrentDiceValue => TotalDice;
+    public int TotalDice => Dice1 + Dice2;
+    public bool IsPair => Dice1 == Dice2;
+    public int JailRollAttemptsLeft { get; private set; } = 3;
+
     public bool HasRolledThisTurn { get; private set; } = false;
     public bool CanRollAgain { get; private set; } = false;
     public int PendingBonusSteps { get; private set; } = 0;
@@ -139,8 +146,10 @@ public class ParchisEngine : IGameEngine
         HasRolledThisTurn = false;
         CanRollAgain = false;
         PendingBonusSteps = 0;
-        CurrentDiceValue = 5;
-        StatusMessage = "🎲 ¡Partida iniciada! Toca 'Lanzar Dado' para obtener tu jugada.";
+        Dice1 = 1;
+        Dice2 = 1;
+        JailRollAttemptsLeft = 3;
+        StatusMessage = "🎲 ¡Partida de Parqués iniciada! Toca '🎲 Tirar' para lanzar los 2 dados.";
 
         // 4 Fichas Jugador 1 (Rojas - Abajo)
         for (int i = 0; i < 4; i++)
@@ -173,30 +182,60 @@ public class ParchisEngine : IGameEngine
 
     public int RollDice()
     {
-        if (IsGameOver) return CurrentDiceValue;
+        if (IsGameOver) return TotalDice;
 
-        CurrentDiceValue = _random.Next(1, 7);
-        HasRolledThisTurn = true;
-        CanRollAgain = (CurrentDiceValue == 6);
+        Dice1 = _random.Next(1, 7);
+        Dice2 = _random.Next(1, 7);
 
         string playerTag = CurrentTurn == PlayerSide.Player1 ? "Tú" : "Rival";
-        if (CurrentDiceValue == 5)
+        bool allInJail = _tokens.Where(t => t.Owner == CurrentTurn).All(t => t.IsInJail);
+
+        if (allInJail)
         {
-            bool hasInJail = _tokens.Any(t => t.Owner == CurrentTurn && t.IsInJail);
-            StatusMessage = hasInJail
-                ? $"🎲 ¡{playerTag} sacó 5! Puedes sacar una ficha de tu casa a la pista o avanzar 5 casillas."
-                : $"🎲 ¡{playerTag} sacó 5! Selecciona una ficha para avanzar 5 casillas.";
-        }
-        else if (CurrentDiceValue == 6)
-        {
-            StatusMessage = $"🎲 ¡{playerTag} sacó 6! Avanzas 6 casillas y repites tiro.";
+            if (IsPair)
+            {
+                HasRolledThisTurn = true;
+                CanRollAgain = true; // Sacar pares repite tiro
+                JailRollAttemptsLeft = 3;
+                StatusMessage = $"🎉 ¡{playerTag} sacó PARES ({Dice1}-{Dice2})! Toca una ficha de tu casa para salir a la pista. ¡Además repites tiro!";
+            }
+            else
+            {
+                JailRollAttemptsLeft--;
+                if (JailRollAttemptsLeft > 0)
+                {
+                    HasRolledThisTurn = false; // Puede seguir tirando en este turno
+                    StatusMessage = $"🎲 {playerTag} sacó {Dice1} y {Dice2} (Total: {TotalDice}). Necesitas PARES para salir de la cárcel. Te queda(n) {JailRollAttemptsLeft} intento(s).";
+                }
+                else
+                {
+                    HasRolledThisTurn = true;
+                    CanRollAgain = false;
+                    JailRollAttemptsLeft = 3;
+                    StatusMessage = $"🎲 {playerTag} sacó {Dice1} y {Dice2}. Agotaste tus 3 tiros sin sacar pares. Turno cedido.";
+                }
+            }
         }
         else
         {
-            StatusMessage = $"🎲 ¡{playerTag} sacó {CurrentDiceValue}! Selecciona una ficha para mover.";
+            HasRolledThisTurn = true;
+            JailRollAttemptsLeft = 3;
+            CanRollAgain = IsPair;
+
+            if (IsPair)
+            {
+                bool hasInJail = _tokens.Any(t => t.Owner == CurrentTurn && t.IsInJail);
+                StatusMessage = hasInJail
+                    ? $"🎉 ¡{playerTag} sacó PARES ({Dice1}-{Dice2}) = {TotalDice}! Puedes sacar una ficha de la cárcel o mover {TotalDice} casillas. ¡Repites tiro!"
+                    : $"🎉 ¡{playerTag} sacó PARES ({Dice1}-{Dice2}) = {TotalDice}! Avanzas {TotalDice} casillas y repites tiro.";
+            }
+            else
+            {
+                StatusMessage = $"🎲 {playerTag} sacó {Dice1} y {Dice2} (Total: {TotalDice}). Toca una ficha para mover {TotalDice} casillas.";
+            }
         }
 
-        return CurrentDiceValue;
+        return TotalDice;
     }
 
     public BoardPiece? GetPieceAt(BoardPosition position)
@@ -229,16 +268,16 @@ public class ParchisEngine : IGameEngine
         var token = _tokens.FirstOrDefault(t => t.Position == from && t.Owner == CurrentTurn && !t.IsInGoal);
         if (token == null) return moves;
 
-        int stepsToApply = PendingBonusSteps > 0 ? PendingBonusSteps : (HasRolledThisTurn ? CurrentDiceValue : 0);
+        int stepsToApply = PendingBonusSteps > 0 ? PendingBonusSteps : (HasRolledThisTurn ? TotalDice : 0);
         if (stepsToApply <= 0) return moves;
 
-        // 1. Si la ficha está en la cárcel: solo puede salir si sacó 5 en el dado normal
+        // 1. Si la ficha está en la cárcel: solo puede salir si sacó PARES en los dados
         if (token.IsInJail)
         {
-            if (PendingBonusSteps == 0 && CurrentDiceValue == 5)
+            if (PendingBonusSteps == 0 && IsPair)
             {
                 var startSquare = GetStartSquare(token.Color);
-                // Puede salir si en la casilla de salida no hay un puente de 2 fichas propias
+                // Puede salir si en la casilla de salida no hay ya 2 fichas propias
                 int myTokensAtStart = _tokens.Count(t => t.Owner == CurrentTurn && t.Position == startSquare && !t.IsInJail);
                 if (myTokensAtStart < 2)
                 {
@@ -252,7 +291,7 @@ public class ParchisEngine : IGameEngine
         var dest = CalculateDestination(token, stepsToApply);
         if (dest.HasValue)
         {
-            // Comprobar si hay barrera/puente enemigo en el destino
+            // Comprobar si hay barrera/puente enemigo en el destino (2 fichas rivales)
             int enemyTokensAtDest = _tokens.Count(t => t.Owner != CurrentTurn && t.Position == dest.Value && !t.IsInGoal);
             if (enemyTokensAtDest < 2)
             {
@@ -420,12 +459,13 @@ public class ParchisEngine : IGameEngine
             return new MoveResult { IsValid = true, CapturedPiece = captured, Message = StatusMessage };
         }
 
-        // Si sacó 6, repite tiro
+        // Si sacó PARES, repite tiro
         if (CanRollAgain)
         {
             CanRollAgain = false;
             HasRolledThisTurn = false;
-            StatusMessage = $"🎲 ¡Sacaste un 6! Tienes derecho a lanzar el dado nuevamente.";
+            JailRollAttemptsLeft = 3;
+            StatusMessage = $"🎉 ¡Sacaste PARES! Tienes un nuevo tiro de dados adicional.";
             return new MoveResult { IsValid = true, CapturedPiece = captured, Message = StatusMessage };
         }
 
@@ -434,9 +474,10 @@ public class ParchisEngine : IGameEngine
         HasRolledThisTurn = false;
         CanRollAgain = false;
         PendingBonusSteps = 0;
+        JailRollAttemptsLeft = 3;
 
         string nextPlayer = CurrentTurn == PlayerSide.Player1 ? "Tu turno" : "Turno del rival";
-        StatusMessage = $"⏳ {nextPlayer} en Parchís. Lanza el dado.";
+        StatusMessage = $"⏳ {nextPlayer} en Parqués. Lanza los dados.";
 
         return new MoveResult
         {
@@ -482,7 +523,8 @@ public class ParchisEngine : IGameEngine
         HasRolledThisTurn = false;
         CanRollAgain = false;
         PendingBonusSteps = 0;
-        StatusMessage = "Sin jugadas posibles para el valor del dado. Turno cedido.";
+        JailRollAttemptsLeft = 3;
+        StatusMessage = "Sin jugadas posibles para los dados. Turno cedido.";
 
         return new MoveResult { IsValid = false, Message = StatusMessage };
     }
@@ -504,3 +546,4 @@ public class ParchisEngine : IGameEngine
         StatusMessage = "Partida de Parchís finalizada en Tablas (Empate acordado).";
     }
 }
+

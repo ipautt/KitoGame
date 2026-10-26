@@ -574,3 +574,4 @@ public class BoardCanvasDrawable : IDrawable
         canvas.DrawString(piece.Symbol, x, y, cellSize, cellSize, HorizontalAlignment.Center, VerticalAlignment.Center);
     }
 }
+

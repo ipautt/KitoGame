@@ -528,19 +528,18 @@ public partial class GameMatchPage : ContentPage
             OpponentCardBorder.BackgroundColor = _engine.CurrentTurn == PlayerSide.Player2 ? Color.FromArgb("#F3E8FF") : Color.FromArgb("#FFFFFF");
         }
 
-        // Actualizar barra de control de Parchís
+        // Actualizar barra de control de Parqués / Parchís
         bool isParchis = _challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase);
         ParchisControlBar.IsVisible = isParchis;
         if (isParchis && _engine is ParchisEngine pe)
         {
-            LblDiceGlyph.Text = pe.CurrentDiceValue switch
+            LblDice1Glyph.Text = pe.Dice1 switch
             {
-                1 => "⚀",
-                2 => "⚁",
-                3 => "⚂",
-                4 => "⚃",
-                5 => "⚄",
-                _ => "⚅"
+                1 => "⚀", 2 => "⚁", 3 => "⚂", 4 => "⚃", 5 => "⚄", _ => "⚅"
+            };
+            LblDice2Glyph.Text = pe.Dice2 switch
+            {
+                1 => "⚀", 2 => "⚁", 3 => "⚂", 4 => "⚃", 5 => "⚄", _ => "⚅"
             };
 
             bool isMyTurn = _engine.CurrentTurn == _mySide && !_isWaitingForBot;
@@ -552,13 +551,15 @@ public partial class GameMatchPage : ContentPage
             }
             else if (!pe.HasRolledThisTurn)
             {
-                LblParchisDiceStatus.Text = isMyTurn ? "¡LANZA EL DADO! 🎲" : "ESPERANDO TIRO RIVAL ⏳";
-                LblParchisDiceSub.Text = isMyTurn ? "Toca el botón '🎲 Tirar' para iniciar tu jugada" : "El rival lanzará el dado en su turno";
+                string attemptsInfo = pe.JailRollAttemptsLeft < 3 ? $" (Intento #{4 - pe.JailRollAttemptsLeft})" : "";
+                LblParchisDiceStatus.Text = isMyTurn ? $"¡LANZA LOS 2 DADOS! 🎲🎲{attemptsInfo}" : "ESPERANDO TIRO RIVAL ⏳";
+                LblParchisDiceSub.Text = isMyTurn ? "Toca el botón '🎲 Tirar' para lanzar los dados" : "El rival lanzará los dados en su turno";
                 BtnRollDice.IsEnabled = isMyTurn;
             }
             else
             {
-                LblParchisDiceStatus.Text = $"DADO: {pe.CurrentDiceValue} 🎲 {(pe.CanRollAgain ? "(¡Repites tiro!)" : "")}";
+                string pairTag = pe.IsPair ? " • ¡PARES! 🎉 (Repites)" : "";
+                LblParchisDiceStatus.Text = $"DADOS: {pe.Dice1} + {pe.Dice2} = {pe.TotalDice} 🎲{pairTag}";
                 LblParchisDiceSub.Text = pe.StatusMessage;
                 BtnRollDice.IsEnabled = false;
             }
@@ -581,30 +582,48 @@ public partial class GameMatchPage : ContentPage
 
         if (_engine.CurrentTurn != _mySide)
         {
-            await DisplayAlert("Turno", "Espera a que sea tu turno para lanzar el dado.", "OK");
+            await DisplayAlert("Turno", "Espera a que sea tu turno para lanzar los dados.", "OK");
             return;
         }
 
         if (pe.HasRolledThisTurn && pe.PendingBonusSteps == 0)
         {
-            await DisplayAlert("Parchís", "Ya lanzaste el dado para este turno. Selecciona una de tus fichas en el tablero.", "OK");
+            await DisplayAlert("Parqués", "Ya lanzaste los dados para este turno. Selecciona una de tus fichas en el tablero.", "OK");
             return;
         }
 
-        // Animación de giro del dado y feedback háptico/sonoro
+        // Animación de giro de los dos dados y feedback háptico/sonoro
         DeviceFeedbackService.TriggerTurnVibration();
         DeviceFeedbackService.PlayNotificationSound();
 
         for (int i = 0; i < 4; i++)
         {
-            int temp = Random.Shared.Next(1, 7);
-            LblDiceGlyph.Text = temp switch { 1 => "⚀", 2 => "⚁", 3 => "⚂", 4 => "⚃", 5 => "⚄", _ => "⚅" };
-            await ParchisDiceBox.ScaleTo(1.15, 50);
-            await ParchisDiceBox.ScaleTo(1.0, 50);
+            int temp1 = Random.Shared.Next(1, 7);
+            int temp2 = Random.Shared.Next(1, 7);
+            LblDice1Glyph.Text = temp1 switch { 1 => "⚀", 2 => "⚁", 3 => "⚂", 4 => "⚃", 5 => "⚄", _ => "⚅" };
+            LblDice2Glyph.Text = temp2 switch { 1 => "⚀", 2 => "⚁", 3 => "⚂", 4 => "⚃", 5 => "⚄", _ => "⚅" };
+            await Task.WhenAll(
+                ParchisDiceBox1.ScaleTo(1.15, 45),
+                ParchisDiceBox2.ScaleTo(1.15, 45),
+                ParchisDiceBox1.RotateTo(12, 45),
+                ParchisDiceBox2.RotateTo(-12, 45)
+            );
+            await Task.WhenAll(
+                ParchisDiceBox1.ScaleTo(1.0, 45),
+                ParchisDiceBox2.ScaleTo(1.0, 45),
+                ParchisDiceBox1.RotateTo(0, 45),
+                ParchisDiceBox2.RotateTo(0, 45)
+            );
         }
 
         int finalValue = pe.RollDice();
         RefreshMatchUI();
+
+        // Si aún tiene intentos disponibles para sacar pares desde la cárcel en este turno
+        if (!pe.HasRolledThisTurn && pe.JailRollAttemptsLeft > 0)
+        {
+            return;
+        }
 
         // Verificar si existe al menos una jugada válida
         bool hasAnyMove = false;
@@ -627,7 +646,7 @@ public partial class GameMatchPage : ContentPage
 
         if (!hasAnyMove)
         {
-            LblParchisDiceSub.Text = $"Sin movimientos posibles con dado {finalValue}. Se cede el turno.";
+            LblParchisDiceSub.Text = $"Sin movimientos posibles con dados ({pe.Dice1}-{pe.Dice2}). Se cede el turno.";
             await Task.Delay(1200);
             pe.TryMakeAutoMove();
             RefreshMatchUI();
@@ -748,7 +767,7 @@ public partial class GameMatchPage : ContentPage
             _highlightedMoves = _engine.GetValidMoves(pos);
             LblHelperHint.Text = _highlightedMoves.Count > 0
                 ? $"Ficha seleccionada. Toca la casilla verde para avanzar."
-                : (_engine is ParchisEngine ? "Esta ficha no puede mover con el dado actual. Necesitas un 5 para salir de casa." : "Esa ficha está bloqueada. Toca otra de tus fichas.");
+                : (_engine is ParchisEngine ? "Esta ficha no puede mover con los dados actuales. Necesitas PARES para salir de la cárcel." : "Esa ficha está bloqueada. Toca otra de tus fichas.");
             RefreshMatchUI();
         }
         else if (piece != null && piece.Owner != _mySide)
