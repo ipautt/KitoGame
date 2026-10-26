@@ -18,7 +18,7 @@
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <Label x:Name="LblMatchTitle"
                                Grid.Column="0"
-                               Text="🔴 Damas Clásicas • #DAMAS1K"
+                               Text="Partida en Vivo • #KITO"
                                FontSize="14"
                                FontAttributes="Bold"
                                TextColor="#1E293B"
@@ -159,6 +159,65 @@
                            TextColor="#047857"
                            HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
+            </Border>
+
+            <!-- ========================================================================= -->
+            <!-- BARRA DE CONTROL DE PARCHÍS (Dado 3D Interactivo y Reglas)                -->
+            <!-- ========================================================================= -->
+            <Border x:Name="ParchisControlBar"
+                    IsVisible="False"
+                    BackgroundColor="#1E293B"
+                    Stroke="#F59E0B"
+                    StrokeThickness="2"
+                    StrokeShape="RoundRectangle 14"
+                    Padding="12,8">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                    <!-- Dado 3D con Puntos Grandes -->
+                    <Border Grid.Column="0"
+                            x:Name="ParchisDiceBox"
+                            WidthRequest="50"
+                            HeightRequest="50"
+                            BackgroundColor="#FFFFFF"
+                            Stroke="#D97706"
+                            StrokeThickness="2.5"
+                            StrokeShape="RoundRectangle 12"
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center">
+                        <Label x:Name="LblDiceGlyph"
+                               Text="⚄"
+                               FontSize="34"
+                               TextColor="#DC2626"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+                    </Border>
+
+                    <!-- Mensaje del Dado y Bonificaciones -->
+                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                        <Label x:Name="LblParchisDiceStatus"
+                               Text="DADO: 5 🎲"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="#F59E0B" />
+                        <Label x:Name="LblParchisDiceSub"
+                               Text="Toca 'Lanzar' para obtener tu número"
+                               FontSize="11"
+                               TextColor="#E2E8F0" />
+                    </VerticalStackLayout>
+
+                    <!-- Botón de Lanzar Dado -->
+                    <Button Grid.Column="2"
+                            x:Name="BtnRollDice"
+                            Text="🎲 Tirar"
+                            Clicked="OnBtnRollDiceClicked"
+                            BackgroundColor="#F59E0B"
+                            TextColor="#1E293B"
+                            FontAttributes="Bold"
+                            FontSize="13"
+                            CornerRadius="10"
+                            Padding="12,4"
+                            HeightRequest="42"
+                            VerticalOptions="Center" />
+                </Grid>
             </Border>
 
             <!-- Tablero Gráfico 2D/3D de Alta Precisión -->

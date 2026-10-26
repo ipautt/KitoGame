@@ -15,10 +15,11 @@ public class ParchisToken
     public int Id { get; set; }
     public PlayerSide Owner { get; set; }
     public ParchisPlayerColor Color { get; set; }
-    public int StepIndex { get; set; } = -1; // -1: En Cárcel/Casa, 0..67: En Pista, 68..75: Pasillo a Meta, 76: En Meta
+    public int StepIndex { get; set; } = -1; // -1: En Cárcel/Casa, 0..51: Pista general, 52..56: Pasillo llegada, 57: Meta
     public bool IsInJail => StepIndex == -1;
-    public bool IsInGoal => StepIndex >= 76;
+    public bool IsInGoal => StepIndex >= 57;
     public BoardPosition Position { get; set; }
+    public BoardPosition JailHomePosition { get; set; }
 }
 
 public class ParchisEngine : IGameEngine
@@ -26,22 +27,22 @@ public class ParchisEngine : IGameEngine
     public GameMetadata Metadata { get; } = new()
     {
         Id = "parchis",
-        Name = "Parchís",
+        Name = "Parchís Clásico",
         Icon = "🎲",
-        ShortDescription = "El clásico juego de mesa para 2 a 4 jugadores. Lanza el dado y lleva tus 4 fichas a la meta.",
-        RulesSummary = "Lanza el dado (1-6). Saca 5 para liberar ficha de la cárcel. Come fichas rivales para avanzar 20 casillas extra. Gana quien corone sus 4 fichas.",
+        ShortDescription = "El clásico rey de los juegos de mesa (2 a 4 jugadores). Sal con 5, come fichas para ganar +20 y llega a la meta para ganar +10.",
+        RulesSummary = "Tira el dado (1-6). Saca 5 para salir de la cárcel. Con 6 repites tiro. Si comes una ficha rival ganas +20 casillas de bonificación. Al meter una ficha a la meta ganas +10. Gana quien corone sus 4 fichas.",
         MinBet = 1000m,
         AccentColorHex = "#F59E0B"
     };
 
-    public int Rows => 8;
-    public int Cols => 8;
+    public int Rows => 15;
+    public int Cols => 15;
 
     public PlayerSide CurrentTurn { get; private set; } = PlayerSide.Player1;
     public bool IsGameOver { get; private set; }
     public PlayerSide Winner { get; private set; } = PlayerSide.None;
     public bool IsDraw { get; private set; }
-    public string StatusMessage { get; private set; } = "Tu turno en Parchís. Toca el dado o una de tus fichas.";
+    public string StatusMessage { get; private set; } = "🎲 ¡Bienvenido al Parchís! Toca 'Lanzar Dado' para iniciar tu turno.";
     public List<string> MoveHistory { get; } = new();
 
     public BoardPosition? LastMoveFrom { get; private set; }
@@ -53,13 +54,71 @@ public class ParchisEngine : IGameEngine
 
     public int CurrentDiceValue { get; private set; } = 5;
     public bool HasRolledThisTurn { get; private set; } = false;
+    public bool CanRollAgain { get; private set; } = false;
+    public int PendingBonusSteps { get; private set; } = 0;
 
     private readonly List<ParchisToken> _tokens = new();
     private readonly Random _random = new();
 
-    // Posiciones predeterminadas de las casas (Cárcel) en el tablero 8x8
-    private static readonly BoardPosition[] P1JailSlots = { new(6, 1), new(6, 2), new(7, 1), new(7, 2) };
-    private static readonly BoardPosition[] P2JailSlots = { new(0, 5), new(0, 6), new(1, 5), new(1, 6) };
+    // Nidos de las 4 Casas (Cárceles) en el tablero 15x15
+    public static readonly BoardPosition[] RedJailSlots = { new(11, 2), new(11, 3), new(12, 2), new(12, 3) };
+    public static readonly BoardPosition[] GreenJailSlots = { new(2, 11), new(2, 12), new(3, 11), new(3, 12) };
+    public static readonly BoardPosition[] YellowJailSlots = { new(2, 2), new(2, 3), new(3, 2), new(3, 3) };
+    public static readonly BoardPosition[] BlueJailSlots = { new(11, 11), new(11, 12), new(12, 11), new(12, 12) };
+
+    // Casilla de Meta Central
+    public static readonly BoardPosition CenterGoal = new(7, 7);
+
+    // Circuito de 52 casillas perimetrales (15x15)
+    public static readonly BoardPosition[] MainTrack = new BoardPosition[52]
+    {
+        // 0..4: Brazo inferior izquierdo (sube col 6)
+        new(13, 6), new(12, 6), new(11, 6), new(10, 6), new(9, 6),
+        // 5..10: Brazo izquierdo inferior (va a la izquierda row 8)
+        new(8, 5), new(8, 4), new(8, 3), new(8, 2), new(8, 1), new(8, 0),
+        // 11: Extremo izquierdo (Seguro)
+        new(7, 0),
+        // 12..17: Brazo izquierdo superior (va a la derecha row 6)
+        new(6, 0), new(6, 1), new(6, 2), new(6, 3), new(6, 4), new(6, 5),
+        // 18..22: Brazo superior izquierdo (sube col 6)
+        new(5, 6), new(4, 6), new(3, 6), new(2, 6), new(1, 6),
+        // 23..24: Extremo superior
+        new(0, 6), new(0, 7),
+        // 25..30: Brazo superior derecho (baja col 8)
+        new(0, 8), new(1, 8), new(2, 8), new(3, 8), new(4, 8), new(5, 8),
+        // 31..36: Brazo derecho superior (va a la derecha row 6)
+        new(6, 9), new(6, 10), new(6, 11), new(6, 12), new(6, 13), new(6, 14),
+        // 37: Extremo derecho (Seguro)
+        new(7, 14),
+        // 38..43: Brazo derecho inferior (va a la izquierda row 8)
+        new(8, 14), new(8, 13), new(8, 12), new(8, 11), new(8, 10), new(8, 9),
+        // 44..48: Brazo inferior derecho (baja col 8)
+        new(9, 8), new(10, 8), new(11, 8), new(12, 8), new(13, 8),
+        // 49..50: Extremo inferior
+        new(14, 8), new(14, 7),
+        // 51: Retorno al brazo inferior
+        new(14, 6)
+    };
+
+    // Pasillos de llegada hacia la meta central (5 casillas exclusivas)
+    public static readonly BoardPosition[] RedArrivalLane = { new(13, 7), new(12, 7), new(11, 7), new(10, 7), new(9, 7), new(8, 7) };
+    public static readonly BoardPosition[] GreenArrivalLane = { new(1, 7), new(2, 7), new(3, 7), new(4, 7), new(5, 7), new(6, 7) };
+    public static readonly BoardPosition[] YellowArrivalLane = { new(7, 1), new(7, 2), new(7, 3), new(7, 4), new(7, 5), new(7, 6) };
+    public static readonly BoardPosition[] BlueArrivalLane = { new(7, 13), new(7, 12), new(7, 11), new(7, 10), new(7, 9), new(7, 8) };
+
+    // Índices de Salida en MainTrack
+    public const int RedStartIndex = 0;     // (13,6)
+    public const int YellowStartIndex = 13; // (6,1)
+    public const int GreenStartIndex = 26;  // (1,8)
+    public const int BlueStartIndex = 39;   // (8,13)
+
+    // Casillas de Seguro oficiales (12 seguros)
+    public static readonly HashSet<int> SafeTrackIndices = new()
+    {
+        RedStartIndex, YellowStartIndex, GreenStartIndex, BlueStartIndex, // 4 salidas
+        11, 24, 37, 50,                                                  // 4 extremos de brazos
+        7, 20, 33, 46                                                    // 4 intermedios
+    };
 
     public ParchisEngine()
     {
@@ -77,9 +136,11 @@ public class ParchisEngine : IGameEngine
         LastMoveFrom = null;
         LastMoveTo = null;
         ForcedPiecePosition = null;
-        HasRolledThisTurn = true;
-        CurrentDiceValue = 5; // Dado inicial de cortesía para permitir salida rápida
-        StatusMessage = "¡Partida iniciada! Toca una ficha roja en tu cárcel para sacarla con el 5.";
+        HasRolledThisTurn = false;
+        CanRollAgain = false;
+        PendingBonusSteps = 0;
+        CurrentDiceValue = 5;
+        StatusMessage = "🎲 ¡Partida iniciada! Toca 'Lanzar Dado' para obtener tu jugada.";
 
         // 4 Fichas Jugador 1 (Rojas - Abajo)
         for (int i = 0; i < 4; i++)
@@ -90,11 +151,12 @@ public class ParchisEngine : IGameEngine
                 Owner = PlayerSide.Player1,
                 Color = ParchisPlayerColor.Red,
                 StepIndex = -1,
-                Position = P1JailSlots[i]
+                JailHomePosition = RedJailSlots[i],
+                Position = RedJailSlots[i]
             });
         }
 
-        // 4 Fichas Jugador 2 (Verdes/Doradas - Arriba)
+        // 4 Fichas Jugador 2 (Verdes - Arriba / Diagonal opuesta clásica)
         for (int i = 0; i < 4; i++)
         {
             _tokens.Add(new ParchisToken
@@ -103,16 +165,37 @@ public class ParchisEngine : IGameEngine
                 Owner = PlayerSide.Player2,
                 Color = ParchisPlayerColor.Green,
                 StepIndex = -1,
-                Position = P2JailSlots[i]
+                JailHomePosition = GreenJailSlots[i],
+                Position = GreenJailSlots[i]
             });
         }
     }
 
     public int RollDice()
     {
+        if (IsGameOver) return CurrentDiceValue;
+
         CurrentDiceValue = _random.Next(1, 7);
         HasRolledThisTurn = true;
-        StatusMessage = $"Dado: {CurrentDiceValue} 🎲 • {(CurrentTurn == PlayerSide.Player1 ? "Tu turno" : "Turno del rival")}";
+        CanRollAgain = (CurrentDiceValue == 6);
+
+        string playerTag = CurrentTurn == PlayerSide.Player1 ? "Tú" : "Rival";
+        if (CurrentDiceValue == 5)
+        {
+            bool hasInJail = _tokens.Any(t => t.Owner == CurrentTurn && t.IsInJail);
+            StatusMessage = hasInJail
+                ? $"🎲 ¡{playerTag} sacó 5! Puedes sacar una ficha de tu casa a la pista o avanzar 5 casillas."
+                : $"🎲 ¡{playerTag} sacó 5! Selecciona una ficha para avanzar 5 casillas.";
+        }
+        else if (CurrentDiceValue == 6)
+        {
+            StatusMessage = $"🎲 ¡{playerTag} sacó 6! Avanzas 6 casillas y repites tiro.";
+        }
+        else
+        {
+            StatusMessage = $"🎲 ¡{playerTag} sacó {CurrentDiceValue}! Selecciona una ficha para mover.";
+        }
+
         return CurrentDiceValue;
     }
 
@@ -121,11 +204,19 @@ public class ParchisEngine : IGameEngine
         var token = _tokens.FirstOrDefault(t => t.Position == position && !t.IsInGoal);
         if (token == null) return null;
 
+        string symbol = token.Color switch
+        {
+            ParchisPlayerColor.Red => "🔴",
+            ParchisPlayerColor.Green => "🟢",
+            ParchisPlayerColor.Yellow => "🟡",
+            _ => "🔵"
+        };
+
         return new BoardPiece
         {
             Owner = token.Owner,
-            Code = $"PARCHIS_{token.Id}",
-            Symbol = token.Owner == PlayerSide.Player1 ? "🔴" : "🟢",
+            Code = $"PARCHIS_{token.Color}_{token.Id}",
+            Symbol = symbol,
             IsKingOrPromoted = token.IsInGoal
         };
     }
@@ -138,50 +229,94 @@ public class ParchisEngine : IGameEngine
         var token = _tokens.FirstOrDefault(t => t.Position == from && t.Owner == CurrentTurn && !t.IsInGoal);
         if (token == null) return moves;
 
-        // Si está en cárcel, solo puede salir si el dado es 5
+        int stepsToApply = PendingBonusSteps > 0 ? PendingBonusSteps : (HasRolledThisTurn ? CurrentDiceValue : 0);
+        if (stepsToApply <= 0) return moves;
+
+        // 1. Si la ficha está en la cárcel: solo puede salir si sacó 5 en el dado normal
         if (token.IsInJail)
         {
-            if (CurrentDiceValue == 5)
+            if (PendingBonusSteps == 0 && CurrentDiceValue == 5)
             {
-                var startSquare = token.Owner == PlayerSide.Player1 ? new BoardPosition(5, 0) : new BoardPosition(2, 7);
-                moves.Add(startSquare);
+                var startSquare = GetStartSquare(token.Color);
+                // Puede salir si en la casilla de salida no hay un puente de 2 fichas propias
+                int myTokensAtStart = _tokens.Count(t => t.Owner == CurrentTurn && t.Position == startSquare && !t.IsInJail);
+                if (myTokensAtStart < 2)
+                {
+                    moves.Add(startSquare);
+                }
             }
             return moves;
         }
 
-        // Si ya está en pista o pasillo, avanza los pasos del dado
-        var dest = CalculateDestination(token, CurrentDiceValue);
+        // 2. Si la ficha ya está en pista o pasillo
+        var dest = CalculateDestination(token, stepsToApply);
         if (dest.HasValue)
         {
-            moves.Add(dest.Value);
+            // Comprobar si hay barrera/puente enemigo en el destino
+            int enemyTokensAtDest = _tokens.Count(t => t.Owner != CurrentTurn && t.Position == dest.Value && !t.IsInGoal);
+            if (enemyTokensAtDest < 2)
+            {
+                moves.Add(dest.Value);
+            }
         }
 
         return moves;
     }
 
+    private BoardPosition GetStartSquare(ParchisPlayerColor color) => color switch
+    {
+        ParchisPlayerColor.Red => MainTrack[RedStartIndex],
+        ParchisPlayerColor.Yellow => MainTrack[YellowStartIndex],
+        ParchisPlayerColor.Green => MainTrack[GreenStartIndex],
+        _ => MainTrack[BlueStartIndex]
+    };
+
     private BoardPosition? CalculateDestination(ParchisToken token, int steps)
     {
-        int targetStep = token.StepIndex + steps;
-        if (targetStep > 76) return null; // No puede pasarse de la meta
+        int totalTrackSteps = 50; // Pasos en pista común antes de entrar al pasillo propio
+        int newStep = token.StepIndex + steps;
 
-        if (targetStep == 76)
+        // Entrada a la meta central
+        if (newStep == 57)
         {
-            // Casilla de Meta central
-            return new BoardPosition(3, 4);
+            return CenterGoal;
         }
 
-        // Simulación de recorrido por el perímetro del tablero 8x8 (68 casillas mapeadas a la cuadrícula)
-        return MapTrackStepToBoard(targetStep, token.Owner);
-    }
+        // No puede pasarse de la meta con un dado mayor
+        if (newStep > 57)
+        {
+            return null;
+        }
 
-    private static BoardPosition MapTrackStepToBoard(int step, PlayerSide owner)
-    {
-        // Ruta perimetral de 24 casillas exteriores + 8 interiores hacia la meta
-        int mod = step % 24;
-        if (mod < 7) return new BoardPosition(7 - mod, 0);
-        if (mod < 14) return new BoardPosition(0, mod - 7);
-        if (mod < 20) return new BoardPosition(mod - 14, 7);
-        return new BoardPosition(7, 24 - mod);
+        // En pasillo de llegada (steps 51..56)
+        if (newStep >= 51)
+        {
+            int corridorIndex = newStep - 51;
+            var corridor = token.Color switch
+            {
+                ParchisPlayerColor.Red => RedArrivalLane,
+                ParchisPlayerColor.Green => GreenArrivalLane,
+                ParchisPlayerColor.Yellow => YellowArrivalLane,
+                _ => BlueArrivalLane
+            };
+
+            if (corridorIndex >= 0 && corridorIndex < corridor.Length)
+                return corridor[corridorIndex];
+
+            return CenterGoal;
+        }
+
+        // En pista común perimetral (steps 0..50)
+        int startOffset = token.Color switch
+        {
+            ParchisPlayerColor.Red => RedStartIndex,
+            ParchisPlayerColor.Yellow => YellowStartIndex,
+            ParchisPlayerColor.Green => GreenStartIndex,
+            _ => BlueStartIndex
+        };
+
+        int trackIndex = (startOffset + newStep) % 52;
+        return MainTrack[trackIndex];
     }
 
     public MoveResult TryMakeMove(BoardPosition from, BoardPosition to)
@@ -198,40 +333,70 @@ public class ParchisEngine : IGameEngine
             return new MoveResult { IsValid = false, Message = "Movimiento no permitido para el valor del dado." };
 
         bool captured = false;
+        bool reachedGoal = false;
+        string actor = CurrentTurn == PlayerSide.Player1 ? "Tú" : "Rival";
+        int appliedSteps = PendingBonusSteps > 0 ? PendingBonusSteps : CurrentDiceValue;
+        PendingBonusSteps = 0; // Consumir bonificación activa
 
-        // Si sale de cárcel
+        // 1. Salida de la cárcel
         if (token.IsInJail)
         {
             token.StepIndex = 0;
             token.Position = to;
-            MoveHistory.Insert(0, $"{(CurrentTurn == PlayerSide.Player1 ? "Tú" : "Rival")}: Sale ficha #{token.Id} con dado 5 🎲");
-        }
-        else
-        {
-            token.StepIndex += CurrentDiceValue;
-            token.Position = to;
 
-            // Verificar si capturó ficha rival
-            var opponentToken = _tokens.FirstOrDefault(t => t.Position == to && t.Owner != CurrentTurn && !t.IsInJail && !t.IsInGoal);
-            if (opponentToken != null)
+            // Si en la salida hay ficha enemiga: ¡Aplastamiento/Captura!
+            var enemyOnStart = _tokens.FirstOrDefault(t => t.Position == to && t.Owner != CurrentTurn && !t.IsInGoal && !t.IsInJail);
+            if (enemyOnStart != null)
             {
-                // Enviar ficha rival a la cárcel
-                opponentToken.StepIndex = -1;
-                opponentToken.Position = opponentToken.Owner == PlayerSide.Player1
-                    ? P1JailSlots[opponentToken.Id - 1]
-                    : P2JailSlots[opponentToken.Id - 5];
-
+                enemyOnStart.StepIndex = -1;
+                enemyOnStart.Position = enemyOnStart.JailHomePosition;
                 captured = true;
-                MoveHistory.Insert(0, $"⚔️ ¡Captura! Ficha #{opponentToken.Id} enviada a la cárcel (+20 pasos)");
-            }
-
-            if (token.IsInGoal)
-            {
-                MoveHistory.Insert(0, $"🏆 ¡Ficha #{token.Id} coronó en la Meta!");
+                PendingBonusSteps = 20;
+                MoveHistory.Insert(0, $"⚔️ ¡{actor} sale de casa aplastando una ficha rival! (+20 de bonificación)");
             }
             else
             {
-                MoveHistory.Insert(0, $"{(CurrentTurn == PlayerSide.Player1 ? "Tú" : "Rival")}: Avanza {CurrentDiceValue} casillas");
+                MoveHistory.Insert(0, $"🎲 {actor} sacó su ficha #{token.Id} de casa a la casilla de salida.");
+            }
+        }
+        else
+        {
+            token.StepIndex += appliedSteps;
+            token.Position = to;
+
+            // 2. Llegada a la meta
+            if (to == CenterGoal || token.StepIndex >= 57)
+            {
+                token.StepIndex = 57;
+                token.Position = CenterGoal;
+                reachedGoal = true;
+                PendingBonusSteps = 10;
+                MoveHistory.Insert(0, $"🏆 ¡{actor} coronó su ficha #{token.Id} en la Meta! (+10 de bonificación con otra ficha)");
+            }
+            else
+            {
+                // 3. Comprobar captura en casilla normal (no seguro)
+                int trackIndex = Array.IndexOf(MainTrack, to);
+                bool isSafeSquare = trackIndex >= 0 && SafeTrackIndices.Contains(trackIndex);
+
+                if (!isSafeSquare)
+                {
+                    var enemyToken = _tokens.FirstOrDefault(t => t.Position == to && t.Owner != CurrentTurn && !t.IsInJail && !t.IsInGoal);
+                    if (enemyToken != null)
+                    {
+                        // Enviar ficha enemiga a su cárcel
+                        enemyToken.StepIndex = -1;
+                        enemyToken.Position = enemyToken.JailHomePosition;
+                        captured = true;
+                        PendingBonusSteps = 20;
+                        MoveHistory.Insert(0, $"⚔️ ¡Captura! {actor} comió ficha #{enemyToken.Id} rival. ¡Ganas +20 casillas de bonificación!");
+                    }
+                }
+
+                if (!captured)
+                {
+                    MoveHistory.Insert(0, $"🎲 {actor} avanzó ficha #{token.Id} {appliedSteps} casillas.");
+                }
             }
         }
 
@@ -243,24 +408,41 @@ public class ParchisEngine : IGameEngine
         {
             IsGameOver = true;
             Winner = CurrentTurn;
-            StatusMessage = $"¡Victoria! {(Winner == PlayerSide.Player1 ? "Jugador 1" : "Jugador 2")} coronó todas sus fichas en Parchís.";
+            StatusMessage = $"¡Victoria! {(Winner == PlayerSide.Player1 ? "Jugador 1" : "Jugador 2")} coronó sus 4 fichas en la Meta de Parchís 🏆.";
             return new MoveResult { IsValid = true, IsGameOver = true, Winner = Winner, Message = StatusMessage };
         }
 
-        // Si sacó 6 o comió ficha, repite turno según reglas clásicas de Parchís.
-        // En caso contrario, rota turno y lanza el dado para el siguiente jugador.
-        if (CurrentDiceValue != 6 && !captured)
+        // Si tiene bonificación pendiente por comer (+20) o por meta (+10), mantiene el turno para cobrarla
+        if (PendingBonusSteps > 0)
         {
-            CurrentTurn = CurrentTurn == PlayerSide.Player1 ? PlayerSide.Player2 : PlayerSide.Player1;
+            HasRolledThisTurn = true;
+            StatusMessage = $"🎁 ¡Tienes bonificación de +{PendingBonusSteps} casillas! Toca una de tus fichas para avanzar.";
+            return new MoveResult { IsValid = true, CapturedPiece = captured, Message = StatusMessage };
         }
 
-        RollDice();
+        // Si sacó 6, repite tiro
+        if (CanRollAgain)
+        {
+            CanRollAgain = false;
+            HasRolledThisTurn = false;
+            StatusMessage = $"🎲 ¡Sacaste un 6! Tienes derecho a lanzar el dado nuevamente.";
+            return new MoveResult { IsValid = true, CapturedPiece = captured, Message = StatusMessage };
+        }
+
+        // De lo contrario, rotar turno al contrincante
+        CurrentTurn = CurrentTurn == PlayerSide.Player1 ? PlayerSide.Player2 : PlayerSide.Player1;
+        HasRolledThisTurn = false;
+        CanRollAgain = false;
+        PendingBonusSteps = 0;
+
+        string nextPlayer = CurrentTurn == PlayerSide.Player1 ? "Tu turno" : "Turno del rival";
+        StatusMessage = $"⏳ {nextPlayer} en Parchís. Lanza el dado.";
 
         return new MoveResult
         {
             IsValid = true,
             CapturedPiece = captured,
-            IsGameOver = IsGameOver,
+            IsGameOver = false,
             Winner = Winner,
             Message = StatusMessage
         };
@@ -271,20 +453,38 @@ public class ParchisEngine : IGameEngine
         if (IsGameOver)
             return new MoveResult { IsValid = false, Message = "Partida finalizada." };
 
+        // Si no ha lanzado el dado en este turno, lanzarlo
+        if (!HasRolledThisTurn && PendingBonusSteps == 0)
+        {
+            RollDice();
+        }
+
         // Buscar una ficha del turno actual que tenga jugada válida
-        foreach (var t in _tokens.Where(tok => tok.Owner == CurrentTurn && !tok.IsInGoal))
+        var myTokens = _tokens.Where(tok => tok.Owner == CurrentTurn && !tok.IsInGoal).ToList();
+        foreach (var t in myTokens)
         {
             var moves = GetValidMoves(t.Position);
             if (moves.Count > 0)
             {
-                return TryMakeMove(t.Position, moves[0]);
+                // Preferir jugada que capture ficha rival o meta gol
+                var bestMove = moves.FirstOrDefault(m =>
+                {
+                    var rival = _tokens.FirstOrDefault(rt => rt.Position == m && rt.Owner != CurrentTurn && !rt.IsInGoal);
+                    return rival != null || m == CenterGoal;
+                });
+
+                return TryMakeMove(t.Position, bestMove.Equals(default(BoardPosition)) ? moves[0] : bestMove);
             }
         }
 
-        // Si ninguna ficha puede mover, rota turno
+        // Si ninguna ficha puede mover, pasa turno
         CurrentTurn = CurrentTurn == PlayerSide.Player1 ? PlayerSide.Player2 : PlayerSide.Player1;
-        RollDice();
-        return new MoveResult { IsValid = false, Message = "El rival no tuvo jugadas válidas y pasó turno." };
+        HasRolledThisTurn = false;
+        CanRollAgain = false;
+        PendingBonusSteps = 0;
+        StatusMessage = "Sin jugadas posibles para el valor del dado. Turno cedido.";
+
+        return new MoveResult { IsValid = false, Message = StatusMessage };
     }
 
     public void Resign(PlayerSide resigningSide)

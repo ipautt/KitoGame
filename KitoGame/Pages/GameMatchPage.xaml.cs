@@ -1,4 +1,5 @@
 using KitoGame.Engine;
+using KitoGame.Engine.Parchis;
 using KitoGame.Engine.Rendering;
 using KitoGame.Models;
 using KitoGame.Services;
@@ -437,17 +438,25 @@ public partial class GameMatchPage : ContentPage
         string p1Tag = _mySide == PlayerSide.Player1 ? $"TÚ ({p1Name.ToUpperInvariant()})" : p1Name.ToUpperInvariant();
         string p2Tag = _mySide == PlayerSide.Player2 ? $"TÚ ({p2Name.ToUpperInvariant()})" : p2Name.ToUpperInvariant();
 
-        LblPlayer1Name.Text = _challenge.GameId == "checkers"
-            ? $"🔴 {p1Tag}"
-            : $"♔ {p1Tag}";
-
-        LblOpponentName.Text = _challenge.GameId == "checkers"
-            ? $"⚫ {p2Tag}"
-            : $"♚ {p2Tag}";
+        if (_challenge.GameId.Equals("checkers", StringComparison.OrdinalIgnoreCase))
+        {
+            LblPlayer1Name.Text = $"🔴 {p1Tag}";
+            LblOpponentName.Text = $"⚫ {p2Tag}";
+        }
+        else if (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase))
+        {
+            LblPlayer1Name.Text = $"🎲🔴 {p1Tag}";
+            LblOpponentName.Text = $"🎲🟡 {p2Tag}";
+        }
+        else
+        {
+            LblPlayer1Name.Text = $"♔ {p1Tag}";
+            LblOpponentName.Text = $"♚ {p2Tag}";
+        }
 
         LblPlayer1Status.Text = _mySide == PlayerSide.Player1
-            ? "🔴 Juegas con las fichas de abajo (Rojas / Blancas)"
-            : $"🔴 Fichas de {p1Name} (Abajo)";
+            ? (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase) ? "🎲 Juegas con fichas Rojas" : "🔴 Juegas con las fichas de abajo")
+            : (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase) ? $"🎲 Fichas de {p1Name}" : $"🔴 Fichas de {p1Name} (Abajo)");
     }
 
     private void RefreshMatchUI()
@@ -465,7 +474,7 @@ public partial class GameMatchPage : ContentPage
             ? $"Premio Neto al Ganador: ${winnerPrize:N0} COP (Comisión 0%)"
             : $"Premio Neto al Ganador: ${winnerPrize:N0} COP (Comisión {commRate:0.#}%: ${commAmount:N0} COP)";
 
-        string unitLabel = _challenge.GameId == "checkers" ? "fichas" : "piezas";
+        string unitLabel = _challenge.GameId.Equals("chess", StringComparison.OrdinalIgnoreCase) ? "piezas" : "fichas";
         LblPlayer1Count.Text = $"{_engine.Player1PiecesCount} {unitLabel}";
         LblPlayer2Count.Text = $"{_engine.Player2PiecesCount} {unitLabel}";
         BtnAdminSimulateWin.IsVisible = _appState.CurrentUser?.IsAdmin == true;
@@ -489,9 +498,19 @@ public partial class GameMatchPage : ContentPage
             LblTurnBanner.TextColor = isMyTurn ? Color.FromArgb("#065F46") : Color.FromArgb("#5B21B6");
             LblHelperHint.TextColor = isMyTurn ? Color.FromArgb("#047857") : Color.FromArgb("#6D28D9");
 
-            string myColorDesc = _mySide == PlayerSide.Player1
-                ? (_challenge.GameId == "checkers" ? "Fichas Rojas (Abajo)" : "Piezas Blancas ♔ (Abajo)")
-                : (_challenge.GameId == "checkers" ? "Fichas Oscuras/Moradas (Arriba)" : "Piezas Negras ♚ (Arriba)");
+            string myColorDesc;
+            if (_challenge.GameId.Equals("checkers", StringComparison.OrdinalIgnoreCase))
+            {
+                myColorDesc = _mySide == PlayerSide.Player1 ? "Fichas Rojas (Abajo)" : "Fichas Oscuras/Moradas (Arriba)";
+            }
+            else if (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase))
+            {
+                myColorDesc = _mySide == PlayerSide.Player1 ? "Fichas Rojas (Casa Roja)" : "Fichas Amarillas (Casa Amarilla)";
+            }
+            else
+            {
+                myColorDesc = _mySide == PlayerSide.Player1 ? "Piezas Blancas ♔ (Abajo)" : "Piezas Negras ♚ (Arriba)";
+            }
 
             string rivalName = _mySide == PlayerSide.Player1
                 ? (_challenge.OpponentUsername ?? "Contrincante")
@@ -509,6 +528,42 @@ public partial class GameMatchPage : ContentPage
             OpponentCardBorder.BackgroundColor = _engine.CurrentTurn == PlayerSide.Player2 ? Color.FromArgb("#F3E8FF") : Color.FromArgb("#FFFFFF");
         }
 
+        // Actualizar barra de control de Parchís
+        bool isParchis = _challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase);
+        ParchisControlBar.IsVisible = isParchis;
+        if (isParchis && _engine is ParchisEngine pe)
+        {
+            LblDiceGlyph.Text = pe.CurrentDiceValue switch
+            {
+                1 => "⚀",
+                2 => "⚁",
+                3 => "⚂",
+                4 => "⚃",
+                5 => "⚄",
+                _ => "⚅"
+            };
+
+            bool isMyTurn = _engine.CurrentTurn == _mySide && !_isWaitingForBot;
+            if (pe.PendingBonusSteps > 0)
+            {
+                LblParchisDiceStatus.Text = $"BONIFICACIÓN: +{pe.PendingBonusSteps} 🎁";
+                LblParchisDiceSub.Text = "Toca una de tus fichas para avanzar el bono ganado.";
+                BtnRollDice.IsEnabled = false;
+            }
+            else if (!pe.HasRolledThisTurn)
+            {
+                LblParchisDiceStatus.Text = isMyTurn ? "¡LANZA EL DADO! 🎲" : "ESPERANDO TIRO RIVAL ⏳";
+                LblParchisDiceSub.Text = isMyTurn ? "Toca el botón '🎲 Tirar' para iniciar tu jugada" : "El rival lanzará el dado en su turno";
+                BtnRollDice.IsEnabled = isMyTurn;
+            }
+            else
+            {
+                LblParchisDiceStatus.Text = $"DADO: {pe.CurrentDiceValue} 🎲 {(pe.CanRollAgain ? "(¡Repites tiro!)" : "")}";
+                LblParchisDiceSub.Text = pe.StatusMessage;
+                BtnRollDice.IsEnabled = false;
+            }
+        }
+
         _boardDrawable.SelectedCell = _selectedCell;
         _boardDrawable.HighlightedMoves = _highlightedMoves;
         BoardCanvasView.Invalidate();
@@ -516,6 +571,71 @@ public partial class GameMatchPage : ContentPage
         if (_engine.MoveHistory.Count > 0)
         {
             LblMoveLog.Text = string.Join("\n", _engine.MoveHistory.Take(6));
+        }
+    }
+
+    private async void OnBtnRollDiceClicked(object? sender, EventArgs e)
+    {
+        if (_engine is not ParchisEngine pe || _challenge == null || _engine.IsGameOver || _isWaitingForBot)
+            return;
+
+        if (_engine.CurrentTurn != _mySide)
+        {
+            await DisplayAlert("Turno", "Espera a que sea tu turno para lanzar el dado.", "OK");
+            return;
+        }
+
+        if (pe.HasRolledThisTurn && pe.PendingBonusSteps == 0)
+        {
+            await DisplayAlert("Parchís", "Ya lanzaste el dado para este turno. Selecciona una de tus fichas en el tablero.", "OK");
+            return;
+        }
+
+        // Animación de giro del dado y feedback háptico/sonoro
+        DeviceFeedbackService.TriggerTurnVibration();
+        DeviceFeedbackService.PlayNotificationSound();
+
+        for (int i = 0; i < 4; i++)
+        {
+            int temp = Random.Shared.Next(1, 7);
+            LblDiceGlyph.Text = temp switch { 1 => "⚀", 2 => "⚁", 3 => "⚂", 4 => "⚃", 5 => "⚄", _ => "⚅" };
+            await ParchisDiceBox.ScaleTo(1.15, 50);
+            await ParchisDiceBox.ScaleTo(1.0, 50);
+        }
+
+        int finalValue = pe.RollDice();
+        RefreshMatchUI();
+
+        // Verificar si existe al menos una jugada válida
+        bool hasAnyMove = false;
+        for (int r = 0; r < pe.Rows; r++)
+        {
+            for (int c = 0; c < pe.Cols; c++)
+            {
+                var piece = pe.GetPieceAt(new BoardPosition(r, c));
+                if (piece != null && piece.Owner == _mySide)
+                {
+                    if (pe.GetValidMoves(new BoardPosition(r, c)).Count > 0)
+                    {
+                        hasAnyMove = true;
+                        break;
+                    }
+                }
+            }
+            if (hasAnyMove) break;
+        }
+
+        if (!hasAnyMove)
+        {
+            LblParchisDiceSub.Text = $"Sin movimientos posibles con dado {finalValue}. Se cede el turno.";
+            await Task.Delay(1200);
+            pe.TryMakeAutoMove();
+            RefreshMatchUI();
+
+            if (_challenge.IsPracticeBot && _engine.CurrentTurn == PlayerSide.Player2 && !_engine.IsGameOver)
+            {
+                await ExecutePracticeBotTurnAsync();
+            }
         }
     }
 
@@ -618,11 +738,17 @@ public partial class GameMatchPage : ContentPage
         var piece = _engine.GetPieceAt(pos);
         if (piece != null && piece.Owner == _mySide)
         {
+            if (_engine is ParchisEngine pe && !pe.HasRolledThisTurn && pe.PendingBonusSteps == 0)
+            {
+                pe.RollDice();
+                DeviceFeedbackService.TriggerTurnVibration();
+            }
+
             _selectedCell = pos;
             _highlightedMoves = _engine.GetValidMoves(pos);
             LblHelperHint.Text = _highlightedMoves.Count > 0
-                ? $"Ficha seleccionada. Toca una de las {_highlightedMoves.Count} casillas con círculo verde para mover."
-                : "Esa ficha está bloqueada. Toca otra de tus fichas.";
+                ? $"Ficha seleccionada. Toca la casilla verde para avanzar."
+                : (_engine is ParchisEngine ? "Esta ficha no puede mover con el dado actual. Necesitas un 5 para salir de casa." : "Esa ficha está bloqueada. Toca otra de tus fichas.");
             RefreshMatchUI();
         }
         else if (piece != null && piece.Owner != _mySide)

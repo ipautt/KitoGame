@@ -92,7 +92,7 @@
                            TextColor="#B45309"
                            HorizontalOptions="Center" />
                     <Label x:Name="LblAppSubtitle"
-                           Text="Plataforma de Retos 1v1 • Damas y Ajedrez"
+                           Text="Plataforma de Retos • Damas, Ajedrez y Parchís"
                            FontSize="13"
                            FontAttributes="Bold"
                            TextColor="#475569"

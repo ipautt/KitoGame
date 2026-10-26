@@ -236,15 +236,23 @@ public partial class LobbyPage : ContentPage
         btn.BorderColor = active ? Color.FromArgb("#D97706") : Color.FromArgb("#CBD5E1");
     }
 
-    private string GetLocalizedGameName(string gameId) =>
-        gameId.Equals("checkers", StringComparison.OrdinalIgnoreCase)
-            ? _appState.Localization.T("GameCheckersName")
-            : _appState.Localization.T("GameChessName");
+    private string GetLocalizedGameName(string gameId)
+    {
+        if (gameId.Equals("checkers", StringComparison.OrdinalIgnoreCase))
+            return _appState.Localization.T("GameCheckersName");
+        if (gameId.Equals("parchis", StringComparison.OrdinalIgnoreCase))
+            return _appState.Localization.T("GameParchisName");
+        return _appState.Localization.T("GameChessName");
+    }
 
-    private string GetLocalizedGameDesc(string gameId) =>
-        gameId.Equals("checkers", StringComparison.OrdinalIgnoreCase)
-            ? _appState.Localization.T("GameCheckersDesc")
-            : _appState.Localization.T("GameChessDesc");
+    private string GetLocalizedGameDesc(string gameId)
+    {
+        if (gameId.Equals("checkers", StringComparison.OrdinalIgnoreCase))
+            return _appState.Localization.T("GameCheckersDesc");
+        if (gameId.Equals("parchis", StringComparison.OrdinalIgnoreCase))
+            return _appState.Localization.T("GameParchisDesc");
+        return _appState.Localization.T("GameChessDesc");
+    }
 
     private void RefreshAllUI()
     {

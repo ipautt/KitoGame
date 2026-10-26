@@ -1,3 +1,4 @@
+using KitoGame.Engine.Parchis;
 using Microsoft.Maui.Graphics;
 
 namespace KitoGame.Engine.Rendering;
@@ -8,7 +9,7 @@ public class BoardCanvasDrawable : IDrawable
     public BoardPosition? SelectedCell { get; set; }
     public IReadOnlyList<BoardPosition> HighlightedMoves { get; set; } = Array.Empty<BoardPosition>();
 
-    private const float BorderMargin = 20f;
+    private const float BorderMargin = 16f;
 
     public BoardPosition? GetCellFromTouchPoint(PointF touchPoint, float viewWidth, float viewHeight)
     {
@@ -16,7 +17,10 @@ public class BoardCanvasDrawable : IDrawable
         float boardSize = size - BorderMargin * 2;
         if (boardSize <= 0) return null;
 
-        float cellSize = boardSize / 8f;
+        int cols = Engine?.Cols ?? 8;
+        int rows = Engine?.Rows ?? 8;
+
+        float cellSize = boardSize / (float)cols;
         float relX = touchPoint.X - BorderMargin;
         float relY = touchPoint.Y - BorderMargin;
 
@@ -27,7 +31,7 @@ public class BoardCanvasDrawable : IDrawable
         int row = (int)(relY / cellSize);
 
         var pos = new BoardPosition(row, col);
-        return pos.IsInsideBoard() ? pos : null;
+        return pos.IsInsideBoard(rows, cols) ? pos : null;
     }
 
     public void Draw(ICanvas canvas, RectF dirtyRect)
@@ -35,10 +39,20 @@ public class BoardCanvasDrawable : IDrawable
         float size = Math.Min(dirtyRect.Width, dirtyRect.Height);
         if (size <= 40) return;
 
+        if (Engine == null) return;
+
+        bool isParchis = Engine.Metadata.Id.Equals("parchis", StringComparison.OrdinalIgnoreCase);
+        if (isParchis)
+        {
+            DrawParchisBoard(canvas, size);
+            return;
+        }
+
+        // --- TABLERO 8x8 (AJEDREZ Y DAMAS) ---
         float boardSize = size - BorderMargin * 2;
         float cellSize = boardSize / 8f;
 
-        // 1. Marco exterior del tablero estilo madera/torneo
+        // Marco exterior estilo torneo
         canvas.FillColor = Color.FromArgb("#1E293B");
         canvas.FillRoundedRectangle(0, 0, size, size, 14f);
 
@@ -62,12 +76,9 @@ public class BoardCanvasDrawable : IDrawable
             canvas.DrawString(rowNumber, size - BorderMargin, ry, BorderMargin, cellSize, HorizontalAlignment.Center, VerticalAlignment.Center);
         }
 
-        if (Engine == null) return;
-
         bool isCheckers = Engine.Metadata.Id.Equals("checkers", StringComparison.OrdinalIgnoreCase);
-        bool isParchis = Engine.Metadata.Id.Equals("parchis", StringComparison.OrdinalIgnoreCase);
 
-        // 2. Dibujar las 64 casillas
+        // Dibujar las 64 casillas
         for (int r = 0; r < 8; r++)
         {
             for (int c = 0; c < 8; c++)
@@ -75,41 +86,15 @@ public class BoardCanvasDrawable : IDrawable
                 var pos = new BoardPosition(r, c);
                 float x = BorderMargin + c * cellSize;
                 float y = BorderMargin + r * cellSize;
-
                 bool isDark = (r + c) % 2 == 1;
 
-                if (isParchis)
-                {
-                    // Casas de Parchís en las esquinas y meta central
-                    if (r >= 5 && c <= 2)
-                        canvas.FillColor = isDark ? Color.FromArgb("#FCA5A5") : Color.FromArgb("#FEF2F2"); // Casa Roja (P1)
-                    else if (r <= 2 && c >= 5)
-                        canvas.FillColor = isDark ? Color.FromArgb("#86EFAC") : Color.FromArgb("#F0FDF4"); // Casa Verde (P2)
-                    else if (r <= 2 && c <= 2)
-                        canvas.FillColor = isDark ? Color.FromArgb("#FDE047") : Color.FromArgb("#FEFCE8"); // Casa Amarilla
-                    else if (r >= 5 && c >= 5)
-                        canvas.FillColor = isDark ? Color.FromArgb("#93C5FD") : Color.FromArgb("#EFF6FF"); // Casa Azul
-                    else if ((r == 3 || r == 4) && (c == 3 || c == 4))
-                        canvas.FillColor = Color.FromArgb("#F59E0B"); // Meta Central 🏆
-                    else
-                        canvas.FillColor = isDark ? Color.FromArgb("#CBD5E1") : Color.FromArgb("#F8FAFC"); // Pistas
-                }
-                else if (isCheckers)
-                {
-                    canvas.FillColor = isDark
-                        ? Color.FromArgb("#273549")
-                        : Color.FromArgb("#E2E8F0");
-                }
-                else
-                {
-                    canvas.FillColor = isDark
-                        ? Color.FromArgb("#334155")
-                        : Color.FromArgb("#F1F5F9");
-                }
+                canvas.FillColor = isCheckers
+                    ? (isDark ? Color.FromArgb("#273549") : Color.FromArgb("#E2E8F0"))
+                    : (isDark ? Color.FromArgb("#334155") : Color.FromArgb("#F1F5F9"));
 
                 canvas.FillRectangle(x, y, cellSize, cellSize);
 
-                // Rastro del último movimiento realizado
+                // Rastro del último movimiento
                 if ((Engine.LastMoveFrom.HasValue && Engine.LastMoveFrom.Value == pos) ||
                     (Engine.LastMoveTo.HasValue && Engine.LastMoveTo.Value == pos))
                 {
@@ -117,7 +102,7 @@ public class BoardCanvasDrawable : IDrawable
                     canvas.FillRectangle(x, y, cellSize, cellSize);
                 }
 
-                // Ficha seleccionada o con salto obligatorio en cadena
+                // Ficha seleccionada
                 bool isSelected = (SelectedCell.HasValue && SelectedCell.Value == pos) ||
                                   (Engine.ForcedPiecePosition.HasValue && Engine.ForcedPiecePosition.Value == pos);
 
@@ -130,15 +115,10 @@ public class BoardCanvasDrawable : IDrawable
                     canvas.DrawRectangle(x + 1.5f, y + 1.5f, cellSize - 3f, cellSize - 3f);
                 }
 
-                // Casillas destino válidas (Indicador verde esmeralda)
+                // Destinos válidos
                 if (HighlightedMoves.Contains(pos))
                 {
-                    bool isJumpOrCapture = SelectedCell.HasValue &&
-                                           (Math.Abs(pos.Row - SelectedCell.Value.Row) == 2 || Engine.GetPieceAt(pos) != null);
-
-                    canvas.FillColor = isJumpOrCapture
-                        ? Color.FromRgba(16, 185, 129, 130)
-                        : Color.FromRgba(16, 185, 129, 90);
+                    canvas.FillColor = Color.FromRgba(16, 185, 129, 120);
                     canvas.FillRectangle(x, y, cellSize, cellSize);
 
                     float centerX = x + cellSize / 2f;
@@ -152,62 +132,330 @@ public class BoardCanvasDrawable : IDrawable
                     canvas.DrawCircle(centerX, centerY, cellSize * 0.28f);
                 }
 
-                // 3. Dibujar ficha o pieza si existe en esta casilla
+                // Dibujar pieza
                 var piece = Engine.GetPieceAt(pos);
                 if (piece != null)
                 {
-                    if (isParchis)
-                    {
-                        DrawParchisToken(canvas, x, y, cellSize, piece);
-                    }
-                    else if (isCheckers)
-                    {
+                    if (isCheckers)
                         DrawCheckerDisc3D(canvas, x, y, cellSize, piece);
-                    }
                     else
-                    {
                         DrawChessPieceMedallion(canvas, x, y, cellSize, piece);
-                    }
                 }
             }
         }
     }
 
-    private static void DrawParchisToken(ICanvas canvas, float x, float y, float cellSize, BoardPiece piece)
+    // =========================================================================
+    // RENDERIZADO DEL TABLERO REAL DE PARCHÍS (15x15)
+    // =========================================================================
+    private void DrawParchisBoard(ICanvas canvas, float size)
+    {
+        float boardSize = size - BorderMargin * 2;
+        float cellSize = boardSize / 15f;
+
+        // 1. Marco exterior de madera de lujo para Parchís
+        canvas.FillColor = Color.FromArgb("#0F172A");
+        canvas.FillRoundedRectangle(0, 0, size, size, 16f);
+
+        canvas.StrokeColor = Color.FromArgb("#F59E0B");
+        canvas.StrokeSize = 2.5f;
+        canvas.DrawRoundedRectangle(1, 1, size - 2, size - 2, 16f);
+
+        // Fondo del tablero en pergamino suave
+        canvas.FillColor = Color.FromArgb("#FFFDF5");
+        canvas.FillRoundedRectangle(BorderMargin, BorderMargin, boardSize, boardSize, 10f);
+
+        // 2. Las 4 Casas de las Esquinas (6x6 celdas cada una)
+        DrawCornerHouse(canvas, BorderMargin, BorderMargin, cellSize * 6, "AMARILLO", Color.FromArgb("#FEF9C3"), Color.FromArgb("#EAB308"), ParchisEngine.YellowJailSlots);
+        DrawCornerHouse(canvas, BorderMargin + 9 * cellSize, BorderMargin, cellSize * 6, "VERDE", Color.FromArgb("#DCFCE7"), Color.FromArgb("#16A34A"), ParchisEngine.GreenJailSlots);
+        DrawCornerHouse(canvas, BorderMargin, BorderMargin + 9 * cellSize, cellSize * 6, "ROJO", Color.FromArgb("#FEE2E2"), Color.FromArgb("#DC2626"), ParchisEngine.RedJailSlots);
+        DrawCornerHouse(canvas, BorderMargin + 9 * cellSize, BorderMargin + 9 * cellSize, cellSize * 6, "AZUL", Color.FromArgb("#DBEAFE"), Color.FromArgb("#2563EB"), ParchisEngine.BlueJailSlots);
+
+        // 3. Dibujar las Casillas del Circuito y Pasillos (15x15)
+        for (int r = 0; r < 15; r++)
+        {
+            for (int c = 0; c < 15; c++)
+            {
+                // Omitir las 4 esquinas de 6x6 y la meta central 3x3 (se dibujan especialmente)
+                bool isCorner = (r < 6 && c < 6) || (r < 6 && c >= 9) || (r >= 9 && c < 6) || (r >= 9 && c >= 9);
+                bool isCenterGoal = (r >= 6 && r <= 8 && c >= 6 && c <= 8);
+                if (isCorner || isCenterGoal) continue;
+
+                var pos = new BoardPosition(r, c);
+                float x = BorderMargin + c * cellSize;
+                float y = BorderMargin + r * cellSize;
+
+                // Color por defecto de casilla
+                Color cellFill = Color.FromArgb("#FFFFFF");
+                Color cellStroke = Color.FromArgb("#CBD5E1");
+
+                // Identificar pasillos de llegada coloreados
+                if (c == 7 && r >= 9 && r <= 13) // Pasillo Rojo
+                {
+                    cellFill = Color.FromArgb("#F87171");
+                    cellStroke = Color.FromArgb("#DC2626");
+                }
+                else if (c == 7 && r >= 1 && r <= 5) // Pasillo Verde
+                {
+                    cellFill = Color.FromArgb("#4ADE80");
+                    cellStroke = Color.FromArgb("#16A34A");
+                }
+                else if (r == 7 && c >= 1 && c <= 5) // Pasillo Amarillo
+                {
+                    cellFill = Color.FromArgb("#FBBF24");
+                    cellStroke = Color.FromArgb("#D97706");
+                }
+                else if (r == 7 && c >= 9 && c <= 13) // Pasillo Azul
+                {
+                    cellFill = Color.FromArgb("#60A5FA");
+                    cellStroke = Color.FromArgb("#2563EB");
+                }
+                // Casillas de Salida
+                else if (r == 13 && c == 6) // Salida Roja
+                {
+                    cellFill = Color.FromArgb("#EF4444");
+                    cellStroke = Color.FromArgb("#B91C1C");
+                }
+                else if (r == 1 && c == 8) // Salida Verde
+                {
+                    cellFill = Color.FromArgb("#10B981");
+                    cellStroke = Color.FromArgb("#047857");
+                }
+                else if (r == 6 && c == 1) // Salida Amarilla
+                {
+                    cellFill = Color.FromArgb("#F59E0B");
+                    cellStroke = Color.FromArgb("#B45309");
+                }
+                else if (r == 8 && c == 13) // Salida Azul
+                {
+                    cellFill = Color.FromArgb("#3B82F6");
+                    cellStroke = Color.FromArgb("#1D4ED8");
+                }
+                // Seguros en extremos
+                else if ((r == 7 && c == 0) || (r == 0 && c == 7) || (r == 7 && c == 14) || (r == 14 && c == 7))
+                {
+                    cellFill = Color.FromArgb("#F1F5F9");
+                    cellStroke = Color.FromArgb("#94A3B8");
+                }
+
+                canvas.FillColor = cellFill;
+                canvas.FillRoundedRectangle(x + 0.5f, y + 0.5f, cellSize - 1f, cellSize - 1f, 3f);
+
+                canvas.StrokeColor = cellStroke;
+                canvas.StrokeSize = 1.2f;
+                canvas.DrawRoundedRectangle(x + 0.5f, y + 0.5f, cellSize - 1f, cellSize - 1f, 3f);
+
+                // Estrella o símbolo en seguros y salidas
+                if ((r == 13 && c == 6) || (r == 1 && c == 8) || (r == 6 && c == 1) || (r == 8 && c == 13) ||
+                    (r == 7 && c == 0) || (r == 0 && c == 7) || (r == 7 && c == 14) || (r == 14 && c == 7))
+                {
+                    canvas.FontColor = Colors.White;
+                    canvas.FontSize = cellSize * 0.45f;
+                    canvas.DrawString("★", x, y, cellSize, cellSize, HorizontalAlignment.Center, VerticalAlignment.Center);
+                }
+
+                // Resaltado de celda seleccionada
+                if (SelectedCell.HasValue && SelectedCell.Value == pos)
+                {
+                    canvas.StrokeColor = Color.FromArgb("#F59E0B");
+                    canvas.StrokeSize = 2.5f;
+                    canvas.DrawRoundedRectangle(x + 1f, y + 1f, cellSize - 2f, cellSize - 2f, 3f);
+                }
+
+                // Resaltado de movimientos válidos
+                if (HighlightedMoves.Contains(pos))
+                {
+                    canvas.FillColor = Color.FromRgba(16, 185, 129, 140);
+                    canvas.FillCircle(x + cellSize / 2f, y + cellSize / 2f, cellSize * 0.35f);
+
+                    canvas.StrokeColor = Colors.White;
+                    canvas.StrokeSize = 2f;
+                    canvas.DrawCircle(x + cellSize / 2f, y + cellSize / 2f, cellSize * 0.35f);
+                }
+            }
+        }
+
+        // 4. Meta Central (3x3 celdas: de row 6..8, col 6..8) con 4 triángulos convergentes
+        DrawParchisCenterGoal(canvas, BorderMargin + 6 * cellSize, BorderMargin + 6 * cellSize, cellSize * 3);
+
+        // Si la meta es destino válido resaltado
+        if (HighlightedMoves.Contains(ParchisEngine.CenterGoal))
+        {
+            float gcx = BorderMargin + 7.5f * cellSize;
+            float gcy = BorderMargin + 7.5f * cellSize;
+            canvas.StrokeColor = Color.FromArgb("#10B981");
+            canvas.StrokeSize = 4f;
+            canvas.DrawCircle(gcx, gcy, cellSize * 1.3f);
+        }
+
+        // 5. Dibujar todas las Fichas (Tokens) de Parchís en sus posiciones
+        for (int r = 0; r < 15; r++)
+        {
+            for (int c = 0; c < 15; c++)
+            {
+                var pos = new BoardPosition(r, c);
+                var piece = Engine.GetPieceAt(pos);
+                if (piece != null)
+                {
+                    float px = BorderMargin + c * cellSize;
+                    float py = BorderMargin + r * cellSize;
+                    bool isSelected = SelectedCell.HasValue && SelectedCell.Value == pos;
+                    DrawParchisToken(canvas, px, py, cellSize, piece, isSelected);
+                }
+            }
+        }
+    }
+
+    private static void DrawCornerHouse(ICanvas canvas, float x, float y, float size, string label, Color bg, Color border, BoardPosition[] jailSlots)
+    {
+        // Cuadrado con bordes suaves de la Casa
+        canvas.FillColor = bg;
+        canvas.FillRoundedRectangle(x + 2, y + 2, size - 4, size - 4, 12f);
+
+        canvas.StrokeColor = border;
+        canvas.StrokeSize = 3f;
+        canvas.DrawRoundedRectangle(x + 2, y + 2, size - 4, size - 4, 12f);
+
+        // Patio interior circular en blanco marfil
+        float cx = x + size / 2f;
+        float cy = y + size / 2f;
+        float yardRadius = size * 0.36f;
+
+        canvas.FillColor = Colors.White;
+        canvas.FillCircle(cx, cy, yardRadius);
+
+        canvas.StrokeColor = border;
+        canvas.StrokeSize = 2f;
+        canvas.DrawCircle(cx, cy, yardRadius);
+
+        // Etiqueta de la Casa
+        canvas.FontColor = border;
+        canvas.FontSize = 10f;
+        canvas.DrawString(label, x, y + 4, size, 14, HorizontalAlignment.Center, VerticalAlignment.Center);
+    }
+
+    private static void DrawParchisCenterGoal(ICanvas canvas, float gx, float gy, float gSize)
+    {
+        float cx = gx + gSize / 2f;
+        float cy = gy + gSize / 2f;
+
+        // Triángulo Superior (Amarillo)
+        var pathTop = new PathF();
+        pathTop.MoveTo(gx, gy);
+        pathTop.LineTo(gx + gSize, gy);
+        pathTop.LineTo(cx, cy);
+        pathTop.Close();
+        canvas.FillColor = Color.FromArgb("#F59E0B");
+        canvas.FillPath(pathTop);
+
+        // Triángulo Derecho (Verde)
+        var pathRight = new PathF();
+        pathRight.MoveTo(gx + gSize, gy);
+        pathRight.LineTo(gx + gSize, gy + gSize);
+        pathRight.LineTo(cx, cy);
+        pathRight.Close();
+        canvas.FillColor = Color.FromArgb("#10B981");
+        canvas.FillPath(pathRight);
+
+        // Triángulo Inferior (Azul)
+        var pathBottom = new PathF();
+        pathBottom.MoveTo(gx + gSize, gy + gSize);
+        pathBottom.LineTo(gx, gy + gSize);
+        pathBottom.LineTo(cx, cy);
+        pathBottom.Close();
+        canvas.FillColor = Color.FromArgb("#3B82F6");
+        canvas.FillPath(pathBottom);
+
+        // Triángulo Izquierdo (Rojo)
+        var pathLeft = new PathF();
+        pathLeft.MoveTo(gx, gy + gSize);
+        pathLeft.LineTo(gx, gy);
+        pathLeft.LineTo(cx, cy);
+        pathLeft.Close();
+        canvas.FillColor = Color.FromArgb("#EF4444");
+        canvas.FillPath(pathLeft);
+
+        // Medallón Central Dorado con Trofeo
+        canvas.FillColor = Color.FromArgb("#D97706");
+        canvas.FillCircle(cx, cy, gSize * 0.22f);
+
+        canvas.FillColor = Color.FromArgb("#FBBF24");
+        canvas.FillCircle(cx, cy, gSize * 0.18f);
+
+        canvas.FontColor = Color.FromArgb("#1E293B");
+        canvas.FontSize = gSize * 0.22f;
+        canvas.DrawString("🏆", cx - gSize * 0.2f, cy - gSize * 0.2f, gSize * 0.4f, gSize * 0.4f, HorizontalAlignment.Center, VerticalAlignment.Center);
+    }
+
+    private static void DrawParchisToken(ICanvas canvas, float x, float y, float cellSize, BoardPiece piece, bool isSelected = false)
     {
         float cx = x + cellSize / 2f;
         float cy = y + cellSize / 2f;
-        float radius = cellSize * 0.38f;
+        float radius = cellSize * 0.42f;
 
-        bool isP1 = piece.Owner == PlayerSide.Player1;
-        Color baseColor = isP1 ? Color.FromArgb("#EF4444") : Color.FromArgb("#10B981");
-        Color darkColor = isP1 ? Color.FromArgb("#991B1B") : Color.FromArgb("#065F46");
-        Color lightColor = isP1 ? Color.FromArgb("#FCA5A5") : Color.FromArgb("#A7F3D0");
+        // Determinar colores de la ficha según su código o dueño
+        Color baseColor, darkColor, lightColor;
+        if (piece.Code.Contains("Red") || (piece.Owner == PlayerSide.Player1 && !piece.Code.Contains("Green")))
+        {
+            baseColor = Color.FromArgb("#EF4444");
+            darkColor = Color.FromArgb("#991B1B");
+            lightColor = Color.FromArgb("#FCA5A5");
+        }
+        else if (piece.Code.Contains("Yellow"))
+        {
+            baseColor = Color.FromArgb("#F59E0B");
+            darkColor = Color.FromArgb("#78350F");
+            lightColor = Color.FromArgb("#FEF08A");
+        }
+        else if (piece.Code.Contains("Blue"))
+        {
+            baseColor = Color.FromArgb("#3B82F6");
+            darkColor = Color.FromArgb("#1E3A8A");
+            lightColor = Color.FromArgb("#BFDBFE");
+        }
+        else
+        {
+            baseColor = Color.FromArgb("#10B981");
+            darkColor = Color.FromArgb("#065F46");
+            lightColor = Color.FromArgb("#A7F3D0");
+        }
 
-        // Sombra
+        // Anillo brillante si está seleccionada
+        if (isSelected)
+        {
+            canvas.StrokeColor = Color.FromArgb("#F59E0B");
+            canvas.StrokeSize = 3.5f;
+            canvas.DrawCircle(cx, cy, radius * 1.35f);
+        }
+
+        // 1. Sombra 3D suave proyectada
         canvas.FillColor = Color.FromRgba(0, 0, 0, 110);
-        canvas.FillCircle(cx + 1.5f, cy + 2.5f, radius);
+        canvas.FillCircle(cx + 1f, cy + 2f, radius);
 
-        // Base 3D
+        // 2. Base cilíndrica biselada (faldón inferior)
         canvas.FillColor = darkColor;
-        canvas.FillCircle(cx, cy + 2f, radius);
+        canvas.FillCircle(cx, cy + 1.2f, radius);
 
-        // Cuerpo superior
+        // 3. Anillo metálico dorado intermedio
+        canvas.StrokeColor = Color.FromArgb("#FDE047");
+        canvas.StrokeSize = 1.5f;
+        canvas.DrawCircle(cx, cy + 0.5f, radius * 0.95f);
+
+        // 4. Cuerpo principal vibrante
         canvas.FillColor = baseColor;
-        canvas.FillCircle(cx, cy - 1f, radius * 0.92f);
+        canvas.FillCircle(cx, cy - 0.8f, radius * 0.88f);
 
-        // Anillo de brillo
-        canvas.StrokeColor = lightColor;
-        canvas.StrokeSize = 2f;
-        canvas.DrawCircle(cx, cy - 1f, radius * 0.82f);
+        // 5. Reflejo especular blanco en la cabeza del peón
+        canvas.FillColor = Color.FromRgba(255, 255, 255, 140);
+        canvas.FillCircle(cx - radius * 0.25f, cy - radius * 0.35f, radius * 0.32f);
 
-        // Cúpula del peón de parchís
+        // 6. Cúpula central
         canvas.FillColor = Colors.White;
-        canvas.FillCircle(cx, cy - 1f, radius * 0.35f);
+        canvas.FillCircle(cx, cy - 0.8f, radius * 0.30f);
 
         canvas.FontColor = darkColor;
-        canvas.FontSize = cellSize * 0.30f;
-        canvas.DrawString(isP1 ? "🔴" : "🟢", cx - radius, cy - radius - 1f, radius * 2, radius * 2, HorizontalAlignment.Center, VerticalAlignment.Center);
+        canvas.FontSize = cellSize * 0.24f;
+        canvas.DrawString("♟", cx - radius, cy - radius - 1f, radius * 2, radius * 2, HorizontalAlignment.Center, VerticalAlignment.Center);
     }
 
     private static void DrawCheckerDisc3D(ICanvas canvas, float x, float y, float cellSize, BoardPiece piece)
@@ -224,15 +472,14 @@ public class BoardCanvasDrawable : IDrawable
 
         if (!piece.IsKingOrPromoted)
         {
-            // --- FICHA NORMAL (PEÓN DE DAMA) ---
             canvas.FillColor = isPlayer1
-                ? Color.FromArgb("#991B1B") // Base roja oscura
-                : Color.FromArgb("#090D16"); // Base negra
+                ? Color.FromArgb("#991B1B")
+                : Color.FromArgb("#090D16");
             canvas.FillCircle(cx, cy + 1.5f, radius);
 
             canvas.FillColor = isPlayer1
-                ? Color.FromArgb("#EF4444") // Cara Roja Rubí (Tuya)
-                : Color.FromArgb("#1E293B"); // Cara Negra/Pizarra (Rival)
+                ? Color.FromArgb("#EF4444")
+                : Color.FromArgb("#1E293B");
             canvas.FillCircle(cx, cy - 1f, radius * 0.94f);
 
             canvas.StrokeColor = isPlayer1
@@ -252,16 +499,12 @@ public class BoardCanvasDrawable : IDrawable
         }
         else if (isPlayer1)
         {
-            // --- TU FICHA CORONADA (REINA JUGADOR 1: ROJO ESCARLATA + BORDE DORADO/ESMERALDA + ★) ---
-            // Disco base doble en Oro
             canvas.FillColor = Color.FromArgb("#D97706");
             canvas.FillCircle(cx, cy + 2f, radius * 1.03f);
 
-            // Cuerpo principal Rojo Escarlata Vivo
             canvas.FillColor = Color.FromArgb("#DC2626");
             canvas.FillCircle(cx, cy - 1.5f, radius * 0.95f);
 
-            // Doble anillo exterior en Oro brillante (#FDE047) y Verde Esmeralda (#10B981)
             canvas.StrokeColor = Color.FromArgb("#FDE047");
             canvas.StrokeSize = 3f;
             canvas.DrawCircle(cx, cy - 1.5f, radius * 0.88f);
@@ -270,7 +513,6 @@ public class BoardCanvasDrawable : IDrawable
             canvas.StrokeSize = 2f;
             canvas.DrawCircle(cx, cy - 1.5f, radius * 0.68f);
 
-            // Centro dorado con estrella blanca/roja distintiva de TU REINA
             canvas.FillColor = Color.FromArgb("#F59E0B");
             canvas.FillCircle(cx, cy - 1.5f, radius * 0.48f);
 
@@ -280,16 +522,12 @@ public class BoardCanvasDrawable : IDrawable
         }
         else
         {
-            // --- FICHA CORONADA DEL CONTRINCANTE (REINA RIVAL: MORADO VIOLETA + BORDE AZUL CIAN + ♛) ---
-            // Disco base doble en Azul Cian Oscuro
             canvas.FillColor = Color.FromArgb("#0284C7");
             canvas.FillCircle(cx, cy + 2f, radius * 1.03f);
 
-            // Cuerpo principal Morado / Violeta Intenso (Color 100% diferente al rojo tuyo)
             canvas.FillColor = Color.FromArgb("#7C3AED");
             canvas.FillCircle(cx, cy - 1.5f, radius * 0.95f);
 
-            // Doble anillo exterior en Azul Cian Brillante (#38BDF8) y Plata
             canvas.StrokeColor = Color.FromArgb("#38BDF8");
             canvas.StrokeSize = 3f;
             canvas.DrawCircle(cx, cy - 1.5f, radius * 0.88f);
@@ -298,7 +536,6 @@ public class BoardCanvasDrawable : IDrawable
             canvas.StrokeSize = 2f;
             canvas.DrawCircle(cx, cy - 1.5f, radius * 0.68f);
 
-            // Centro oscuro con símbolo cian distintivo de REINA RIVAL
             canvas.FillColor = Color.FromArgb("#3B0764");
             canvas.FillCircle(cx, cy - 1.5f, radius * 0.48f);
 
@@ -337,4 +574,3 @@ public class BoardCanvasDrawable : IDrawable
         canvas.DrawString(piece.Symbol, x, y, cellSize, cellSize, HorizontalAlignment.Center, VerticalAlignment.Center);
     }
 }
-

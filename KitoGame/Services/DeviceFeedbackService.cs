@@ -8,6 +8,11 @@ namespace KitoGame.Services;
 public static class DeviceFeedbackService
 {
     /// <summary>
+    /// Hace vibrar el dispositivo cuando es el turno del jugador.
+    /// </summary>
+    public static void TriggerTurnVibration() => Vibrate(400);
+
+    /// <summary>
     /// Hace vibrar el dispositivo durante la duración especificada (en milisegundos).
     /// </summary>
     public static void Vibrate(int milliseconds = 400)
@@ -115,3 +120,4 @@ public static class DeviceFeedbackService
 #endif
     }
 }
+
