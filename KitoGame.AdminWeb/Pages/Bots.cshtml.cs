@@ -73,3 +73,4 @@ public class BotsModel : PageModel
         return RedirectToPage();
     }
 }
+

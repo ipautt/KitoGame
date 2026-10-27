@@ -358,10 +358,140 @@ public class ParchisEngine : IGameEngine
         return MainTrack[trackIndex];
     }
 
+    private int FindStepIndexForPosition(ParchisToken token, BoardPosition targetPos)
+    {
+        if (targetPos == CenterGoal) return 57;
+
+        // Comprobar pasillo de llegada propio
+        var corridor = token.Color switch
+        {
+            ParchisPlayerColor.Red => RedArrivalLane,
+            ParchisPlayerColor.Green => GreenArrivalLane,
+            ParchisPlayerColor.Yellow => YellowArrivalLane,
+            _ => BlueArrivalLane
+        };
+
+        for (int i = 0; i < corridor.Length; i++)
+        {
+            if (corridor[i] == targetPos)
+                return 51 + i;
+        }
+
+        // Comprobar pista principal perimetral
+        int startOffset = token.Color switch
+        {
+            ParchisPlayerColor.Red => RedStartIndex,
+            ParchisPlayerColor.Yellow => YellowStartIndex,
+            ParchisPlayerColor.Green => GreenStartIndex,
+            _ => BlueStartIndex
+        };
+
+        int trackIdx = Array.IndexOf(MainTrack, targetPos);
+        if (trackIdx >= 0)
+        {
+            return (trackIdx - startOffset + 52) % 52;
+        }
+
+        return token.StepIndex >= 0 ? token.StepIndex + 1 : 0;
+    }
+
+    public MoveResult ApplyDirectMove(BoardPosition from, BoardPosition to)
+    {
+        if (IsGameOver)
+            return new MoveResult { IsValid = false, Message = "La partida ya terminó." };
+
+        // Buscar la ficha en la posición origen
+        var token = _tokens.FirstOrDefault(t => t.Position == from && !t.IsInGoal);
+        if (token == null)
+            return new MoveResult { IsValid = false, Message = "Ficha no encontrada en la posición." };
+
+        CurrentTurn = token.Owner;
+        bool captured = false;
+
+        if (token.IsInJail)
+        {
+            token.StepIndex = 0;
+            token.Position = to;
+
+            // Aplastamiento en la casilla de salida
+            var enemyOnStart = _tokens.FirstOrDefault(t => t.Position == to && t.Owner != CurrentTurn && !t.IsInGoal && !t.IsInJail);
+            if (enemyOnStart != null)
+            {
+                enemyOnStart.StepIndex = -1;
+                enemyOnStart.Position = enemyOnStart.JailHomePosition;
+                captured = true;
+            }
+        }
+        else
+        {
+            token.StepIndex = FindStepIndexForPosition(token, to);
+            token.Position = to;
+
+            if (to == CenterGoal || token.StepIndex >= 57)
+            {
+                token.StepIndex = 57;
+                token.Position = CenterGoal;
+            }
+            else
+            {
+                int trackIndex = Array.IndexOf(MainTrack, to);
+                bool isSafeSquare = trackIndex >= 0 && SafeTrackIndices.Contains(trackIndex);
+                if (!isSafeSquare)
+                {
+                    var enemyToken = _tokens.FirstOrDefault(t => t.Position == to && t.Owner != CurrentTurn && !t.IsInJail && !t.IsInGoal);
+                    if (enemyToken != null)
+                    {
+                        enemyToken.StepIndex = -1;
+                        enemyToken.Position = enemyToken.JailHomePosition;
+                        captured = true;
+                    }
+                }
+            }
+        }
+
+        LastMoveFrom = from;
+        LastMoveTo = to;
+        HasRolledThisTurn = false;
+        CanRollAgain = false;
+        PendingBonusSteps = 0;
+
+        // Comprobar victoria
+        if (_tokens.Where(t => t.Owner == CurrentTurn).All(t => t.IsInGoal))
+        {
+            IsGameOver = true;
+            Winner = CurrentTurn;
+            StatusMessage = $"¡Victoria! {(Winner == PlayerSide.Player1 ? "Jugador 1" : "Jugador 2")} coronó sus 4 fichas en la Meta de Parchís 🏆.";
+            return new MoveResult { IsValid = true, IsGameOver = true, Winner = Winner, Message = StatusMessage };
+        }
+
+        // Rotar turno al siguiente jugador
+        CurrentTurn = CurrentTurn == PlayerSide.Player1 ? PlayerSide.Player2 : PlayerSide.Player1;
+        JailRollAttemptsLeft = 3;
+
+        string nextPlayer = CurrentTurn == PlayerSide.Player1 ? "Tu turno" : "Turno del rival";
+        StatusMessage = $"⏳ {nextPlayer} en Parqués. Lanza los dados.";
+
+        return new MoveResult
+        {
+            IsValid = true,
+            CapturedPiece = captured,
+            IsGameOver = false,
+            Winner = Winner,
+            Message = StatusMessage
+        };
+    }
+
     public MoveResult TryMakeMove(BoardPosition from, BoardPosition to)
     {
         if (IsGameOver)
             return new MoveResult { IsValid = false, Message = "La partida ya terminó." };
+
+        // Si se llama sin haber tirado dados y sin bonificación (ej: reproduciendo historial de jugadas o sincronización de red),
+        // aplicamos el movimiento de forma directa para restaurar la posición con total fidelidad.
+        if (!HasRolledThisTurn && PendingBonusSteps == 0)
+        {
+            return ApplyDirectMove(from, to);
+        }
 
         var token = _tokens.FirstOrDefault(t => t.Position == from && t.Owner == CurrentTurn && !t.IsInGoal);
         if (token == null)
@@ -451,9 +581,22 @@ public class ParchisEngine : IGameEngine
             return new MoveResult { IsValid = true, IsGameOver = true, Winner = Winner, Message = StatusMessage };
         }
 
-        // Si tiene bonificación pendiente por comer (+20) o por meta (+10), mantiene el turno para cobrarla
+        // Si tiene bonificación pendiente por comer (+20) o por meta (+10), comprueba si puede jugarla
         if (PendingBonusSteps > 0)
         {
+            bool canApplyBonus = _tokens.Any(t => t.Owner == CurrentTurn && !t.IsInGoal && GetValidMoves(t.Position).Count > 0);
+            if (!canApplyBonus)
+            {
+                PendingBonusSteps = 0;
+                CurrentTurn = CurrentTurn == PlayerSide.Player1 ? PlayerSide.Player2 : PlayerSide.Player1;
+                HasRolledThisTurn = false;
+                CanRollAgain = false;
+                JailRollAttemptsLeft = 3;
+                string nxt = CurrentTurn == PlayerSide.Player1 ? "Tu turno" : "Turno del rival";
+                StatusMessage = $"Sin movimientos para la bonificación de +20. {nxt} en Parqués.";
+                return new MoveResult { IsValid = true, CapturedPiece = captured, Message = StatusMessage };
+            }
+
             HasRolledThisTurn = true;
             StatusMessage = $"🎁 ¡Tienes bonificación de +{PendingBonusSteps} casillas! Toca una de tus fichas para avanzar.";
             return new MoveResult { IsValid = true, CapturedPiece = captured, Message = StatusMessage };

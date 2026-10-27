@@ -130,7 +130,8 @@
                                    FontAttributes="Bold"
                                    TextColor="#5B21B6" />
                         </Border>
-                        <Label Text="Reina: 🟣♛ Morada"
+                        <Label x:Name="LblQueenP2"
+                               Text="Reina: 🟣♛ Morada"
                                FontSize="10"
                                FontAttributes="Bold"
                                TextColor="#7C3AED"
@@ -299,7 +300,8 @@
                                    FontAttributes="Bold"
                                    TextColor="#991B1B" />
                         </Border>
-                        <Label Text="Reina: 🔴★ Roja/Oro"
+                        <Label x:Name="LblQueenP1"
+                               Text="Reina: 🔴★ Roja/Oro"
                                FontSize="10"
                                FontAttributes="Bold"
                                TextColor="#B45309"

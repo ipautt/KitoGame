@@ -459,7 +459,7 @@ public partial class GameMatchPage : ContentPage
         else if (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase))
         {
             LblPlayer1Name.Text = $"🎲🔴 {p1Tag}";
-            LblOpponentName.Text = $"🎲🟡 {p2Tag}";
+            LblOpponentName.Text = $"🎲🟢 {p2Tag}";
         }
         else
         {
@@ -467,9 +467,12 @@ public partial class GameMatchPage : ContentPage
             LblOpponentName.Text = $"♚ {p2Tag}";
         }
 
+        LblQueenP1.IsVisible = _challenge.GameId.Equals("checkers", StringComparison.OrdinalIgnoreCase);
+        LblQueenP2.IsVisible = _challenge.GameId.Equals("checkers", StringComparison.OrdinalIgnoreCase);
+
         LblPlayer1Status.Text = _mySide == PlayerSide.Player1
-            ? (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase) ? "🎲 Juegas con fichas Rojas" : "🔴 Juegas con las fichas de abajo")
-            : (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase) ? $"🎲 Fichas de {p1Name}" : $"🔴 Fichas de {p1Name} (Abajo)");
+            ? (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase) ? "🎲 Juegas con fichas Rojas (Casa Roja • Acordeón)" : "🔴 Juegas con las fichas de abajo")
+            : (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase) ? $"🎲 Fichas Rojas de {p1Name}" : $"🔴 Fichas de {p1Name} (Abajo)");
     }
 
     private void RefreshMatchUI()
@@ -518,7 +521,7 @@ public partial class GameMatchPage : ContentPage
             }
             else if (_challenge.GameId.Equals("parchis", StringComparison.OrdinalIgnoreCase))
             {
-                myColorDesc = _mySide == PlayerSide.Player1 ? "Fichas Rojas (Casa Roja)" : "Fichas Amarillas (Casa Amarilla)";
+                myColorDesc = _mySide == PlayerSide.Player1 ? "Fichas Rojas (Casa Roja • Acordeón)" : "Fichas Verdes (Casa Verde • Café)";
             }
             else
             {
@@ -638,24 +641,34 @@ public partial class GameMatchPage : ContentPage
             return;
         }
 
-        // Verificar si existe al menos una jugada válida
+        // Verificar si existe al menos una jugada válida y preseleccionar automáticamente
         bool hasAnyMove = false;
+        _selectedCell = null;
+        _highlightedMoves = Array.Empty<BoardPosition>();
+
         for (int r = 0; r < pe.Rows; r++)
         {
             for (int c = 0; c < pe.Cols; c++)
             {
-                var piece = pe.GetPieceAt(new BoardPosition(r, c));
+                var bp = new BoardPosition(r, c);
+                var piece = pe.GetPieceAt(bp);
                 if (piece != null && piece.Owner == _mySide)
                 {
-                    if (pe.GetValidMoves(new BoardPosition(r, c)).Count > 0)
+                    var valid = pe.GetValidMoves(bp);
+                    if (valid.Count > 0)
                     {
                         hasAnyMove = true;
-                        break;
+                        if (!_selectedCell.HasValue)
+                        {
+                            _selectedCell = bp;
+                            _highlightedMoves = valid;
+                            LblHelperHint.Text = "¡Ficha lista para mover! Toca la casilla resaltada en verde en el tablero.";
+                        }
                     }
                 }
             }
-            if (hasAnyMove) break;
         }
+        RefreshMatchUI();
 
         if (!hasAnyMove)
         {
@@ -804,23 +817,44 @@ public partial class GameMatchPage : ContentPage
         _isWaitingForBot = true;
         RefreshMatchUI();
 
-        await Task.Delay(600);
+        PlayerSide botSide = GetBotSide();
+        int loopSafety = 0;
 
-        _engine.TryMakeAutoMove();
-        _isWaitingForBot = false;
-
-        // Si la jugada fue registrada en el motor, sincronizar con la nube
-        if (_challenge != null && _engine.LastMoveFrom.HasValue && _engine.LastMoveTo.HasValue)
+        // El Bot debe ejecutar todas las acciones continuas de su turno (tiros adicionales por pares o bonificación de +20/+10)
+        while (!_engine.IsGameOver && _engine.CurrentTurn == botSide && loopSafety++ < 6)
         {
-            _appliedMoveCount++;
-            await _appState.RecordMoveAndSyncAsync(_challenge.Id, _engine.LastMoveFrom.Value, _engine.LastMoveTo.Value);
+            await Task.Delay(650);
+
+            var moveRes = _engine.TryMakeAutoMove();
+
+            // Si la jugada fue registrada en el motor, sincronizar con la nube
+            if (_challenge != null && _engine.LastMoveFrom.HasValue && _engine.LastMoveTo.HasValue)
+            {
+                _appliedMoveCount++;
+                await _appState.RecordMoveAndSyncAsync(_challenge.Id, _engine.LastMoveFrom.Value, _engine.LastMoveTo.Value);
+            }
+
+            RefreshMatchUI();
+
+            if (_engine.IsGameOver)
+                break;
+
+            // Si el intento no fue válido y sigue en su turno (ej: sin jugadas para dados), forzar cesión para no bloquear
+            if (!moveRes.IsValid && _engine.CurrentTurn == botSide)
+            {
+                break;
+            }
         }
 
-        string botName = GetBotSide() == PlayerSide.Player1
+        _isWaitingForBot = false;
+
+        string botName = botSide == PlayerSide.Player1
             ? (string.IsNullOrWhiteSpace(_challenge?.CreatorDisplayName) ? "El Bot" : _challenge.CreatorDisplayName)
             : (string.IsNullOrWhiteSpace(_challenge?.OpponentDisplayName) ? "El Bot" : _challenge.OpponentDisplayName);
 
-        LblHelperHint.Text = $"{botName} movió (casillas azules). Es tu turno.";
+        LblHelperHint.Text = _engine.CurrentTurn == _mySide
+            ? $"{botName} terminó su jugada. ¡Es tu turno de lanzar los dados!"
+            : $"{botName} movió (casillas azules).";
         RefreshMatchUI();
 
         if (_engine.IsGameOver)

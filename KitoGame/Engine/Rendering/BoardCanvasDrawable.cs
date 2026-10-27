@@ -30,6 +30,35 @@ public class BoardCanvasDrawable : IDrawable
         int col = (int)(relX / cellSize);
         int row = (int)(relY / cellSize);
 
+        // Para Parqués Colombiano (15x15), facilitar el toque en las 4 esquinas de salida/cárcel
+        if (Engine != null && Engine.Metadata.Id.Equals("parchis", StringComparison.OrdinalIgnoreCase))
+        {
+            if (row < 6 && col >= 9) // Esquina Verde (Arriba-Derecha)
+            {
+                var jailPos = new[] { new BoardPosition(2, 11), new BoardPosition(2, 12), new BoardPosition(3, 11), new BoardPosition(3, 12) }
+                    .FirstOrDefault(p => Engine.GetPieceAt(p) != null);
+                if (jailPos != default) return jailPos;
+            }
+            else if (row >= 9 && col < 6) // Esquina Roja (Abajo-Izquierda)
+            {
+                var jailPos = new[] { new BoardPosition(11, 2), new BoardPosition(11, 3), new BoardPosition(12, 2), new BoardPosition(12, 3) }
+                    .FirstOrDefault(p => Engine.GetPieceAt(p) != null);
+                if (jailPos != default) return jailPos;
+            }
+            else if (row < 6 && col < 6) // Esquina Amarilla (Arriba-Izquierda)
+            {
+                var jailPos = new[] { new BoardPosition(2, 2), new BoardPosition(2, 3), new BoardPosition(3, 2), new BoardPosition(3, 3) }
+                    .FirstOrDefault(p => Engine.GetPieceAt(p) != null);
+                if (jailPos != default) return jailPos;
+            }
+            else if (row >= 9 && col >= 9) // Esquina Azul (Abajo-Derecha)
+            {
+                var jailPos = new[] { new BoardPosition(11, 11), new BoardPosition(11, 12), new BoardPosition(12, 11), new BoardPosition(12, 12) }
+                    .FirstOrDefault(p => Engine.GetPieceAt(p) != null);
+                if (jailPos != default) return jailPos;
+            }
+        }
+
         var pos = new BoardPosition(row, col);
         return pos.IsInsideBoard(rows, cols) ? pos : null;
     }

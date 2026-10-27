@@ -52,3 +52,4 @@ public class SystemBot
     [BsonIgnore]
     public double WinRate => MatchesPlayed > 0 ? Math.Round((double)Wins / MatchesPlayed * 100, 1) : 0;
 }
+
