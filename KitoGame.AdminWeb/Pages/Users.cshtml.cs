@@ -10,6 +10,7 @@ public class UsersModel : PageModel
     private readonly AdminDataService _dataService;
 
     public List<User> Users { get; set; } = new();
+    public Dictionary<string, List<WalletTransaction>> UserTransactions { get; set; } = new();
 
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
@@ -25,6 +26,11 @@ public class UsersModel : PageModel
     public async Task OnGetAsync()
     {
         Users = await _dataService.GetUsersAsync(Search, OnlyBanned);
+        foreach (var u in Users)
+        {
+            var txs = await _dataService.GetUserWalletTransactionsAsync(u.Id, u.Username, 50);
+            UserTransactions[u.Id] = txs;
+        }
     }
 
     public async Task<IActionResult> OnPostResetPasswordAsync(string userId, string newPassword)

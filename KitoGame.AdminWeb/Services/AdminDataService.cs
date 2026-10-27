@@ -431,7 +431,37 @@ public class AdminDataService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "ERROR EN GetUsersAsync: {Message}", ex.Message);
+            _logger.LogError(ex, "ERROR EN GetWalletTransactionsAsync: {Message}", ex.Message);
+            return new();
+        }
+    }
+
+    public async Task<List<WalletTransaction>> GetUserWalletTransactionsAsync(string userId, string? username = null, int take = 100)
+    {
+        if (TransactionsCollection == null) return new();
+        try
+        {
+            FilterDefinition<WalletTransaction> filter;
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                filter = Builders<WalletTransaction>.Filter.Or(
+                    Builders<WalletTransaction>.Filter.Eq(t => t.UserId, userId),
+                    Builders<WalletTransaction>.Filter.Eq(t => t.Username, username)
+                );
+            }
+            else
+            {
+                filter = Builders<WalletTransaction>.Filter.Eq(t => t.UserId, userId);
+            }
+
+            return await TransactionsCollection.Find(filter)
+                .SortByDescending(t => t.Timestamp)
+                .Limit(take)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ERROR EN GetUserWalletTransactionsAsync: {Message}", ex.Message);
             return new();
         }
     }

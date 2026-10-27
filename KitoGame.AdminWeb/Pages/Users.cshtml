@@ -111,6 +111,11 @@
                         </td>
                         <td class="text-end">
                             <div class="btn-group btn-group-sm">
+                                <!-- Botón Historial de Billetera -->
+                                <button type="button" class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#modalHistory_@user.Id" title="Historial de Saldo y Movimientos">
+                                    <i class="fa-solid fa-clock-rotate-left text-info"></i>
+                                </button>
+
                                 <!-- Botón Reset Password -->
                                 <button type="button" class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#modalPassword_@user.Id" title="Restablecer Contraseña">
                                     <i class="fa-solid fa-key text-warning"></i>
@@ -202,6 +207,108 @@
                                                 <button type="submit" class="btn btn-success">Aplicar Ajuste de Saldo</button>
                                             </div>
                                         </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal Historial de Billetera y Transacciones -->
+                            <div class="modal fade text-start" id="modalHistory_@user.Id" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered modal-lg">
+                                    <div class="modal-content card-custom text-white">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title">
+                                                <i class="fa-solid fa-clock-rotate-left text-info me-2"></i>
+                                                Historial de Saldos y Transacciones: @user.Username
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-md-6">
+                                                    <div class="p-2 bg-dark rounded border border-secondary">
+                                                        <span class="text-secondary small d-block">Saldo Disponible:</span>
+                                                        <span class="fs-5 fw-bold text-success">$@user.Balance.ToString("N0") COP</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="p-2 bg-dark rounded border border-secondary">
+                                                        <span class="text-secondary small d-block">Saldo en Retos / Custodia:</span>
+                                                        <span class="fs-5 fw-bold text-warning">$@user.LockedBalance.ToString("N0") COP</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            @{
+                                                var history = Model.UserTransactions.TryGetValue(user.Id, out var txList) ? txList : new List<KitoGame.Shared.Models.WalletTransaction>();
+                                            }
+
+                                            @if (!history.Any())
+                                            {
+                                                <div class="text-center py-4 text-secondary">
+                                                    <i class="fa-solid fa-receipt fa-2x mb-2 text-muted"></i>
+                                                    <p class="mb-0">No hay movimientos o transacciones registradas para este usuario.</p>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                                    <table class="table table-dark table-sm table-striped align-middle mb-0" style="font-size: 13px;">
+                                                        <thead>
+                                                            <tr class="text-secondary">
+                                                                <th>Fecha</th>
+                                                                <th>Tipo</th>
+                                                                <th>Monto</th>
+                                                                <th>Descripción</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var tx in history)
+                                                            {
+                                                                <tr>
+                                                                    <td class="text-nowrap text-secondary">@tx.FormattedDate</td>
+                                                                    <td>
+                                                                        @switch (tx.Type)
+                                                                        {
+                                                                            case KitoGame.Shared.Models.TransactionType.Deposit:
+                                                                                <span class="badge bg-success">Depósito / Recarga</span>
+                                                                                break;
+                                                                            case KitoGame.Shared.Models.TransactionType.Withdrawal:
+                                                                                <span class="badge bg-danger">Retiro</span>
+                                                                                break;
+                                                                            case KitoGame.Shared.Models.TransactionType.BetLocked:
+                                                                                <span class="badge bg-warning text-dark">Apuesta en Juego</span>
+                                                                                break;
+                                                                            case KitoGame.Shared.Models.TransactionType.BetRefund:
+                                                                                <span class="badge bg-info text-dark">Reembolso / Devolución</span>
+                                                                                break;
+                                                                            case KitoGame.Shared.Models.TransactionType.PrizeWon:
+                                                                                <span class="badge bg-success text-white">🏆 Premio Ganado</span>
+                                                                                break;
+                                                                            case KitoGame.Shared.Models.TransactionType.PlatformCommission:
+                                                                                <span class="badge bg-secondary">Comisión Plataforma</span>
+                                                                                break;
+                                                                            case KitoGame.Shared.Models.TransactionType.AdminAdjustment:
+                                                                                <span class="badge bg-primary">Ajuste Admin</span>
+                                                                                break;
+                                                                            default:
+                                                                                <span class="badge bg-secondary">@tx.Type</span>
+                                                                                break;
+                                                                        }
+                                                                    </td>
+                                                                    <td class="text-nowrap fw-bold @(tx.Amount >= 0 ? "text-success" : "text-danger")">
+                                                                        @tx.FormattedAmount
+                                                                    </td>
+                                                                    <td class="text-light text-break">@tx.Description</td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="modal-footer border-secondary">
+                                            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cerrar</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
