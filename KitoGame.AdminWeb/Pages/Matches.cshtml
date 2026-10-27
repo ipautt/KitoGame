@@ -1,0 +1,311 @@
+@page
+@model KitoGame.AdminWeb.Pages.MatchesModel
+@{
+    ViewData["Title"] = "Gestión de Partidas y Retos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1 text-white"><i class="fa-solid fa-gamepad text-warning me-2"></i> Gestión de Partidas y Retos</h2>
+        <p class="text-secondary small mb-0">Supervisión en vivo de retos creados, partidas activas y purga de partidas de prueba.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-danger fw-bold" data-bs-toggle="modal" data-bs-target="#modalPurge">
+            <i class="fa-solid fa-broom me-1"></i> Limpiar Partidas de Prueba
+        </button>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-circle-check me-2"></i> @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.StatusError))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i> @Model.StatusError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Métricas Rápidas y Filtros por Estado -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    <a href="/Matches" class="btn btn-sm @(string.IsNullOrEmpty(Model.StatusFilter) ? "btn-gold" : "btn-secondary-custom")">
+        Todas (@Model.TotalCount)
+    </a>
+    <a href="/Matches?status=0" class="btn btn-sm @(Model.StatusFilter == "0" ? "btn-warning text-dark fw-bold" : "btn-secondary-custom")">
+        <i class="fa-solid fa-hourglass-half me-1"></i> En Espera (@Model.WaitingCount)
+    </a>
+    <a href="/Matches?status=1" class="btn btn-sm @(Model.StatusFilter == "1" ? "btn-success fw-bold" : "btn-secondary-custom")">
+        <i class="fa-solid fa-play me-1"></i> En Curso (@Model.ActiveCount)
+    </a>
+    <a href="/Matches?status=2" class="btn btn-sm @(Model.StatusFilter == "2" ? "btn-info fw-bold" : "btn-secondary-custom")">
+        <i class="fa-solid fa-flag-checkered me-1"></i> Finalizadas (@Model.FinishedCount)
+    </a>
+    <a href="/Matches?status=bot" class="btn btn-sm @(Model.StatusFilter == "bot" ? "btn-primary fw-bold" : "btn-secondary-custom")">
+        <i class="fa-solid fa-robot me-1"></i> Práctica con Bot (@Model.BotCount)
+    </a>
+</div>
+
+<!-- Barra de Búsqueda -->
+<div class="card-custom mb-4">
+    <form method="get" class="row g-2 align-items-center">
+        <input type="hidden" name="status" value="@Model.StatusFilter" />
+        <div class="col-md-9">
+            <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                <input type="text" name="search" value="@Model.Search" class="form-control bg-dark border-secondary text-white" placeholder="Buscar por ID de partida, jugador, rival o juego..." />
+            </div>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-gold w-100"><i class="fa-solid fa-filter me-1"></i> Filtrar</button>
+            <a href="/Matches" class="btn btn-secondary-custom"><i class="fa-solid fa-rotate-left"></i></a>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de Partidas -->
+<div class="card-custom">
+    <div class="table-responsive">
+        <table class="table table-custom mb-0">
+            <thead>
+                <tr>
+                    <th>ID / Fecha</th>
+                    <th>Juego</th>
+                    <th>Creador (P1)</th>
+                    <th>Rival (P2)</th>
+                    <th>Apuesta / Pozo</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Matches.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-gamepad fs-2 d-block mb-2 text-secondary"></i>
+                            No hay partidas registradas con el criterio seleccionado.
+                        </td>
+                    </tr>
+                }
+                @foreach (var match in Model.Matches)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-white font-monospace">#@match.Id</div>
+                            <div class="small text-secondary">@match.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fs-4">@match.GameIcon</span>
+                                <div>
+                                    <div class="fw-bold text-white">@match.GameName</div>
+                                    <div class="small text-secondary">@match.GameId</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-white">@(string.IsNullOrEmpty(match.CreatorDisplayName) ? match.CreatorUsername : match.CreatorDisplayName)</div>
+                            <div class="small text-secondary">@@@match.CreatorUsername</div>
+                        </td>
+                        <td>
+                            @if (match.IsPracticeBot)
+                            {
+                                <span class="badge bg-primary"><i class="fa-solid fa-robot me-1"></i> Bot IA</span>
+                            }
+                            else if (!string.IsNullOrEmpty(match.OpponentUsername))
+                            {
+                                <div class="fw-bold text-white">@(string.IsNullOrEmpty(match.OpponentDisplayName) ? match.OpponentUsername : match.OpponentDisplayName)</div>
+                                <div class="small text-secondary">@@@match.OpponentUsername</div>
+                            }
+                            else if (!string.IsNullOrEmpty(match.TargetOpponentUsername))
+                            {
+                                <span class="badge bg-secondary">Esperando a @@@match.TargetOpponentUsername</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-dark border border-secondary text-secondary">Esperando rival...</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="fw-bold text-warning">@match.FormattedBet</div>
+                            <div class="small text-secondary">Pozo: @match.FormattedPot</div>
+                        </td>
+                        <td>
+                            @switch (match.Status)
+                            {
+                                case KitoGame.Shared.Models.MatchStatus.WaitingForOpponent:
+                                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-hourglass-half me-1"></i> En Espera</span>
+                                    break;
+                                case KitoGame.Shared.Models.MatchStatus.Active:
+                                    <span class="badge bg-success"><i class="fa-solid fa-play me-1"></i> En Curso</span>
+                                    break;
+                                case KitoGame.Shared.Models.MatchStatus.Completed:
+                                    <span class="badge bg-info text-dark"><i class="fa-solid fa-trophy me-1"></i> Ganó @(match.WinnerUsername ?? "P1")</span>
+                                    break;
+                                case KitoGame.Shared.Models.MatchStatus.Cancelled:
+                                    <span class="badge bg-secondary"><i class="fa-solid fa-ban me-1"></i> Cancelada</span>
+                                    break;
+                                case KitoGame.Shared.Models.MatchStatus.Draw:
+                                    <span class="badge bg-light text-dark"><i class="fa-solid fa-handshake me-1"></i> Tablas</span>
+                                    break;
+                            }
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalDeleteSingle" 
+                                    data-match-id="@match.Id" 
+                                    data-match-game="@match.GameName" 
+                                    data-match-creator="@match.CreatorUsername"
+                                    data-match-bet="@match.FormattedBet"
+                                    data-match-status="@match.Status">
+                                <i class="fa-solid fa-trash-can me-1"></i> Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Eliminar Partida Individual -->
+<div class="modal fade" id="modalDeleteSingle" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <form method="post" asp-page-handler="DeleteMatch">
+                <input type="hidden" name="challengeId" id="singleMatchId" />
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="fa-solid fa-trash-can me-2"></i> Eliminar Partida
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">¿Estás seguro de que deseas eliminar permanentemente esta partida?</p>
+                    <div class="p-3 bg-black bg-opacity-50 rounded border border-secondary mb-3">
+                        <div class="row g-2 small">
+                            <div class="col-4 text-secondary">Partida ID:</div>
+                            <div class="col-8 fw-bold text-warning font-monospace" id="lblSingleId">--</div>
+                            <div class="col-4 text-secondary">Juego:</div>
+                            <div class="col-8 fw-bold" id="lblSingleGame">--</div>
+                            <div class="col-4 text-secondary">Creador:</div>
+                            <div class="col-8 fw-bold" id="lblSingleCreator">--</div>
+                            <div class="col-4 text-secondary">Apuesta:</div>
+                            <div class="col-8 fw-bold text-success" id="lblSingleBet">--</div>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="refundBet" value="true" id="chkRefund" checked>
+                        <label class="form-check-label small" for="chkRefund">
+                            Reembolsar automáticamente la apuesta al creador si la partida estaba en espera.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger fw-bold">
+                        <i class="fa-solid fa-trash-can me-1"></i> Confirmar Eliminación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Purga Masiva de Partidas de Prueba -->
+<div class="modal fade" id="modalPurge" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-danger">
+            <form method="post" asp-page-handler="PurgeMatches">
+                <div class="modal-header border-secondary bg-danger bg-opacity-25">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="fa-solid fa-broom me-2"></i> Limpiar Partidas de Prueba
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-secondary mb-3">
+                        Selecciona el criterio de limpieza. Las partidas eliminadas se borrarán permanentemente de la base de datos Atlas.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-white small">¿Qué partidas deseas limpiar?</label>
+                        <div class="d-flex flex-column gap-2">
+                            <label class="p-2 border border-secondary rounded d-flex align-items-center gap-2" style="cursor: pointer;">
+                                <input type="radio" name="purgeMode" value="bots" class="form-check-input" checked />
+                                <div>
+                                    <div class="fw-bold text-white small"><i class="fa-solid fa-robot text-primary me-1"></i> Solo partidas contra Bot de práctica</div>
+                                    <div class="text-secondary" style="font-size: 11px;">Partidas individuales jugadas contra la IA.</div>
+                                </div>
+                            </label>
+
+                            <label class="p-2 border border-secondary rounded d-flex align-items-center gap-2" style="cursor: pointer;">
+                                <input type="radio" name="purgeMode" value="finished" class="form-check-input" />
+                                <div>
+                                    <div class="fw-bold text-white small"><i class="fa-solid fa-flag-checkered text-info me-1"></i> Partidas ya finalizadas, canceladas o tablas</div>
+                                    <div class="text-secondary" style="font-size: 11px;">Historial de partidas que ya concluyeron su juego.</div>
+                                </div>
+                            </label>
+
+                            <label class="p-2 border border-secondary rounded d-flex align-items-center gap-2" style="cursor: pointer;">
+                                <input type="radio" name="purgeMode" value="waiting" class="form-check-input" />
+                                <div>
+                                    <div class="fw-bold text-white small"><i class="fa-solid fa-hourglass-half text-warning me-1"></i> Partidas abandonadas en espera de rival</div>
+                                    <div class="text-secondary" style="font-size: 11px;">Retos abiertos sin contrincante conectado.</div>
+                                </div>
+                            </label>
+
+                            <label class="p-2 border border-danger rounded d-flex align-items-center gap-2" style="cursor: pointer;">
+                                <input type="radio" name="purgeMode" value="all" class="form-check-input" />
+                                <div>
+                                    <div class="fw-bold text-danger small"><i class="fa-solid fa-dumpster-fire text-danger me-1"></i> TODAS las partidas de prueba (Vaciar colección)</div>
+                                    <div class="text-secondary" style="font-size: 11px;">Elimina absolutamente todos los retos de la base de datos para iniciar limpio.</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="refundWaiting" value="true" id="chkPurgeRefund" checked>
+                        <label class="form-check-label small" for="chkPurgeRefund">
+                            Reembolsar saldo a creadores de partidas en espera antes de borrarlas.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger fw-bold">
+                        <i class="fa-solid fa-trash-can me-1"></i> Ejecutar Limpieza
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const modalDeleteSingle = document.getElementById('modalDeleteSingle');
+    if (modalDeleteSingle) {
+        modalDeleteSingle.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-match-id');
+            const game = button.getAttribute('data-match-game');
+            const creator = button.getAttribute('data-match-creator');
+            const bet = button.getAttribute('data-match-bet');
+
+            document.getElementById('singleMatchId').value = id;
+            document.getElementById('lblSingleId').textContent = '#' + id;
+            document.getElementById('lblSingleGame').textContent = game;
+            document.getElementById('lblSingleCreator').textContent = '@@' + creator;
+            document.getElementById('lblSingleBet').textContent = bet;
+        });
+    }
+</script>
+}

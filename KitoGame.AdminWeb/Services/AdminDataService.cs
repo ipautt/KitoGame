@@ -444,8 +444,151 @@ public class AdminDataService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "ERROR EN GetUsersAsync: {Message}", ex.Message);
+            _logger.LogError(ex, "ERROR EN GetAuditLogsAsync: {Message}", ex.Message);
             return new();
+        }
+    }
+
+    public async Task<List<MatchChallenge>> GetChallengesAsync(string? statusFilter = null, string? search = null, int take = 100)
+    {
+        if (ChallengesCollection == null) return new();
+        try
+        {
+            var builder = Builders<MatchChallenge>.Filter;
+            var filter = builder.Empty;
+
+            if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "all")
+            {
+                if (statusFilter.Equals("bot", StringComparison.OrdinalIgnoreCase))
+                {
+                    filter = builder.And(filter, builder.Eq(m => m.IsPracticeBot, true));
+                }
+                else if (int.TryParse(statusFilter, out int statusInt) && Enum.IsDefined(typeof(MatchStatus), statusInt))
+                {
+                    filter = builder.And(filter, builder.Eq(m => m.Status, (MatchStatus)statusInt));
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                filter = builder.And(filter, builder.Or(
+                    builder.Regex(m => m.Id, new BsonRegularExpression(s, "i")),
+                    builder.Regex(m => m.CreatorUsername, new BsonRegularExpression(s, "i")),
+                    builder.Regex(m => m.OpponentUsername, new BsonRegularExpression(s, "i")),
+                    builder.Regex(m => m.GameName, new BsonRegularExpression(s, "i"))
+                ));
+            }
+
+            return await ChallengesCollection.Find(filter)
+                .SortByDescending(m => m.CreatedAt)
+                .Limit(take)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ERROR EN GetChallengesAsync: {Message}", ex.Message);
+            return new();
+        }
+    }
+
+    public async Task<(bool Success, string Message)> DeleteChallengeAsync(string challengeId, bool refundBet, string admin)
+    {
+        if (ChallengesCollection == null) return (false, "Sin conexión a la base de datos.");
+        try
+        {
+            var match = await ChallengesCollection.Find(m => m.Id == challengeId).FirstOrDefaultAsync();
+            if (match == null) return (false, "Partida no encontrada.");
+
+            // Si se solicita reembolsar y la partida estaba en espera o activa
+            if (refundBet && match.BetAmount > 0 && UsersCollection != null)
+            {
+                if (!string.IsNullOrEmpty(match.CreatorId))
+                {
+                    await UsersCollection.UpdateOneAsync(
+                        u => u.Id == match.CreatorId,
+                        Builders<User>.Update.Inc(u => u.Balance, match.BetAmount));
+                }
+                if (!string.IsNullOrEmpty(match.OpponentId) && match.Status == MatchStatus.Active)
+                {
+                    await UsersCollection.UpdateOneAsync(
+                        u => u.Id == match.OpponentId,
+                        Builders<User>.Update.Inc(u => u.Balance, match.BetAmount));
+                }
+            }
+
+            var res = await ChallengesCollection.DeleteOneAsync(m => m.Id == challengeId);
+            if (res.DeletedCount > 0)
+            {
+                await LogAuditAsync(admin, "DeleteMatch", $"Match #{challengeId}", $"Partida {match.GameName} (#{match.Id}) eliminada por el administrador. Reembolso: {(refundBet ? "Sí" : "No")}.");
+                return (true, $"Partida #{challengeId} eliminada correctamente.");
+            }
+            return (false, "No se pudo eliminar la partida.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Error eliminando partida: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Success, string Message, int DeletedCount)> PurgeTestChallengesAsync(string mode, bool refundWaiting, string admin)
+    {
+        if (ChallengesCollection == null) return (false, "Sin conexión a la base de datos.", 0);
+        try
+        {
+            var builder = Builders<MatchChallenge>.Filter;
+            FilterDefinition<MatchChallenge> filter;
+
+            if (mode == "bots")
+            {
+                filter = builder.Eq(m => m.IsPracticeBot, true);
+            }
+            else if (mode == "finished")
+            {
+                filter = builder.Or(
+                    builder.Eq(m => m.Status, MatchStatus.Completed),
+                    builder.Eq(m => m.Status, MatchStatus.Cancelled),
+                    builder.Eq(m => m.Status, MatchStatus.Draw)
+                );
+            }
+            else if (mode == "waiting")
+            {
+                filter = builder.Eq(m => m.Status, MatchStatus.WaitingForOpponent);
+            }
+            else // "all"
+            {
+                filter = builder.Empty;
+            }
+
+            var matchesToDelete = await ChallengesCollection.Find(filter).ToListAsync();
+            if (matchesToDelete.Count == 0)
+            {
+                return (true, "No se encontraron partidas para eliminar con el criterio seleccionado.", 0);
+            }
+
+            // Si refundWaiting es true, devolver la apuesta al creador para partidas que estaban en espera
+            if (refundWaiting && UsersCollection != null)
+            {
+                foreach (var m in matchesToDelete.Where(m => m.Status == MatchStatus.WaitingForOpponent && m.BetAmount > 0))
+                {
+                    if (!string.IsNullOrEmpty(m.CreatorId))
+                    {
+                        await UsersCollection.UpdateOneAsync(
+                            u => u.Id == m.CreatorId,
+                            Builders<User>.Update.Inc(u => u.Balance, m.BetAmount));
+                    }
+                }
+            }
+
+            var deleteRes = await ChallengesCollection.DeleteManyAsync(filter);
+            int count = (int)deleteRes.DeletedCount;
+
+            await LogAuditAsync(admin, "PurgeMatches", $"Criterio: {mode}", $"Se eliminaron {count} partidas masivamente desde Backoffice. Reembolso: {(refundWaiting ? "Sí" : "No")}.");
+            return (true, $"¡Se eliminaron exitosamente {count} partidas!", count);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Error durante la purga de partidas: {ex.Message}", 0);
         }
     }
 

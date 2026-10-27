@@ -45,11 +45,13 @@
     <div class="col-md-3 col-sm-6">
         <div class="card-custom h-100" style="border-left: 4px solid #F59E0B;">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-secondary small text-uppercase fw-bold">Partidas Hoy</span>
-                <span class="badge bg-warning bg-opacity-25 text-warning rounded-pill px-2 py-1"><i class="fa-solid fa-chess-board"></i></span>
+                <span class="text-secondary small text-uppercase fw-bold">Partidas y Retos</span>
+                <span class="badge bg-warning bg-opacity-25 text-warning rounded-pill px-2 py-1"><i class="fa-solid fa-gamepad"></i></span>
             </div>
             <h3 class="fw-bold text-white mb-1">@Model.Stats.TodayMatches</h3>
-            <div class="small text-muted">Damas y Ajedrez en curso o terminadas</div>
+            <div class="small text-muted">
+                <a href="/Matches" class="text-decoration-none text-warning fw-bold"><i class="fa-solid fa-broom me-1"></i> Gestionar / Limpiar &rarr;</a>
+            </div>
         </div>
     </div>
 
