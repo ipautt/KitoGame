@@ -497,11 +497,20 @@ public class AdminDataService
         if (ChallengesCollection == null) return (false, "Sin conexión a la base de datos.");
         try
         {
-            var match = await ChallengesCollection.Find(m => m.Id == challengeId).FirstOrDefaultAsync();
-            if (match == null) return (false, "Partida no encontrada.");
+            challengeId = (challengeId ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(challengeId))
+                return (false, "El ID de la partida no fue recibido.");
 
-            // Si se solicita reembolsar y la partida estaba en espera o activa
-            if (refundBet && match.BetAmount > 0 && UsersCollection != null)
+            // Buscar por Id o por _id en Bson
+            var idFilter = Builders<MatchChallenge>.Filter.Or(
+                Builders<MatchChallenge>.Filter.Eq(m => m.Id, challengeId),
+                Builders<MatchChallenge>.Filter.Eq("_id", challengeId)
+            );
+
+            var match = await ChallengesCollection.Find(idFilter).FirstOrDefaultAsync();
+
+            // Si se solicita reembolsar y se encontró la partida con apuesta
+            if (match != null && refundBet && match.BetAmount > 0 && UsersCollection != null)
             {
                 try
                 {
@@ -516,7 +525,7 @@ public class AdminDataService
                                 Builders<User>.Update.Set(u => u.Balance, newBal));
                         }
                     }
-                    if (!string.IsNullOrEmpty(match.OpponentId) && match.Status == MatchStatus.Active)
+                    if (!string.IsNullOrEmpty(match.OpponentId) && (int)match.Status == 1) // En Curso
                     {
                         var opponent = await GetUserByIdAsync(match.OpponentId);
                         if (opponent != null)
@@ -530,20 +539,23 @@ public class AdminDataService
                 }
                 catch (Exception exRefund)
                 {
-                    _logger.LogWarning("Advertencia al procesar reembolso de partida #{Id}: {Msg}", match.Id, exRefund.Message);
+                    _logger.LogWarning("Advertencia al procesar reembolso de partida #{Id}: {Msg}", challengeId, exRefund.Message);
                 }
             }
 
-            var res = await ChallengesCollection.DeleteOneAsync(m => m.Id == challengeId);
+            // Eliminar la partida de la colección
+            var res = await ChallengesCollection.DeleteOneAsync(idFilter);
             if (res.DeletedCount > 0)
             {
-                await LogAuditAsync(admin, "DeleteMatch", $"Match #{challengeId}", $"Partida {match.GameName} (#{match.Id}) eliminada por el administrador. Reembolso: {(refundBet ? "Sí" : "No")}.");
+                await LogAuditAsync(admin, "DeleteMatch", $"Match #{challengeId}", $"Partida #{challengeId} eliminada por el administrador.");
                 return (true, $"Partida #{challengeId} eliminada correctamente.");
             }
-            return (false, "No se pudo eliminar la partida.");
+
+            return (false, $"No se encontró la partida #{challengeId} para eliminar.");
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error eliminando partida #{Id}", challengeId);
             return (false, $"Error eliminando partida: {ex.Message}");
         }
     }
@@ -565,12 +577,18 @@ public class AdminDataService
                 filter = builder.Or(
                     builder.Eq(m => m.Status, MatchStatus.Completed),
                     builder.Eq(m => m.Status, MatchStatus.Cancelled),
-                    builder.Eq(m => m.Status, MatchStatus.Draw)
+                    builder.Eq(m => m.Status, MatchStatus.Draw),
+                    builder.Eq("Status", 2),
+                    builder.Eq("Status", 3),
+                    builder.Eq("Status", 4)
                 );
             }
             else if (mode == "waiting")
             {
-                filter = builder.Eq(m => m.Status, MatchStatus.WaitingForOpponent);
+                filter = builder.Or(
+                    builder.Eq(m => m.Status, MatchStatus.WaitingForOpponent),
+                    builder.Eq("Status", 0)
+                );
             }
             else // "all"
             {
@@ -583,10 +601,10 @@ public class AdminDataService
                 return (true, "No se encontraron partidas para eliminar con el criterio seleccionado.", 0);
             }
 
-            // Si refundWaiting es true, devolver la apuesta al creador para partidas que estaban en espera
+            // Reembolsos seguros
             if (refundWaiting && UsersCollection != null)
             {
-                foreach (var m in matchesToDelete.Where(m => m.Status == MatchStatus.WaitingForOpponent && m.BetAmount > 0))
+                foreach (var m in matchesToDelete.Where(m => (int)m.Status == 0 && m.BetAmount > 0))
                 {
                     if (!string.IsNullOrEmpty(m.CreatorId))
                     {
@@ -610,10 +628,11 @@ public class AdminDataService
             int count = (int)deleteRes.DeletedCount;
 
             await LogAuditAsync(admin, "PurgeMatches", $"Criterio: {mode}", $"Se eliminaron {count} partidas masivamente desde Backoffice. Reembolso: {(refundWaiting ? "Sí" : "No")}.");
-            return (true, $"¡Se eliminaron exitosamente {count} partidas!", count);
+            return (true, $"¡Se eliminaron exitosamente {count} partidas de la base de datos!", count);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en PurgeTestChallengesAsync");
             return (false, $"Error durante la purga de partidas: {ex.Message}", 0);
         }
     }

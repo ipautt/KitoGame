@@ -58,9 +58,15 @@ public class MatchesModel : PageModel
         string admin = User.Identity?.Name ?? "Admin";
         var res = await _dataService.DeleteChallengeAsync(challengeId, refundBet, admin);
         if (res.Success)
+        {
+            TempData["SuccessMessage"] = res.Message;
             StatusMessage = res.Message;
+        }
         else
+        {
+            TempData["ErrorMessage"] = res.Message;
             StatusError = res.Message;
+        }
 
         return RedirectToPage(new { status = StatusFilter, search = Search });
     }
@@ -70,9 +76,15 @@ public class MatchesModel : PageModel
         string admin = User.Identity?.Name ?? "Admin";
         var res = await _dataService.PurgeTestChallengesAsync(purgeMode, refundWaiting, admin);
         if (res.Success)
+        {
+            TempData["SuccessMessage"] = res.Message;
             StatusMessage = res.Message;
+        }
         else
+        {
+            TempData["ErrorMessage"] = res.Message;
             StatusError = res.Message;
+        }
 
         return RedirectToPage();
     }
