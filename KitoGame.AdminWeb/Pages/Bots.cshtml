@@ -1,0 +1,284 @@
+@page
+@model KitoGame.AdminWeb.Pages.BotsModel
+@{
+    ViewData["Title"] = "Gestión de Bots de Juego";
+    int activeCount = Model.Bots.Count(b => b.IsEnabled);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold text-white mb-1">
+            <i class="fa-solid fa-robot text-warning me-2"></i> Módulo de Bots Inteligentes (5 Bots)
+        </h2>
+        <p class="text-secondary mb-0">Control total de inteligencias artificiales para jugar con los usuarios que indiques.</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <span class="badge @(activeCount > 0 ? "bg-success" : "bg-danger") px-3 py-2 fs-6">
+            <i class="fa-solid fa-circle-check me-1"></i> @activeCount / @Model.Bots.Count Bots Activos
+        </span>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show bg-success text-white border-0 shadow" role="alert">
+        <i class="fa-solid fa-circle-check me-2"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show bg-danger text-white border-0 shadow" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Grid de los 5 Bots -->
+<div class="row g-4 mb-5">
+    @foreach (var bot in Model.Bots)
+    {
+        <div class="col-lg-4 col-md-6">
+            <div class="card card-custom h-100 position-relative border-0 shadow-lg" style="background: #111827; border: 1px solid rgba(255,255,255,0.08) !important;">
+                
+                <!-- Encabezado con Color Personalizado -->
+                <div class="p-3 rounded-top d-flex justify-content-between align-items-center" style="background: @bot.ColorHex;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size: 28px;">@bot.AvatarEmoji</span>
+                        <div>
+                            <h5 class="fw-bold text-white mb-0">@bot.Name</h5>
+                            <span class="badge bg-dark text-light" style="font-size: 11px;">@@@bot.Username</span>
+                        </div>
+                    </div>
+                    <div>
+                        @if (bot.IsEnabled)
+                        {
+                            <span class="badge bg-success border border-light"><i class="fa-solid fa-bolt me-1"></i> ACTIVO</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary border border-light"><i class="fa-solid fa-power-off me-1"></i> INACTIVO</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="card-body d-flex flex-column justify-content-between p-3">
+                    <div>
+                        <!-- Nivel y Estilo -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-warning text-dark fw-bold">
+                                <i class="fa-solid fa-brain me-1"></i> @bot.SkillLevelName
+                            </span>
+                            <span class="small text-muted"><i class="fa-solid fa-gamepad me-1"></i> @bot.FavoriteGame</span>
+                        </div>
+
+                        <!-- Estilo de Juego -->
+                        <div class="mb-2 p-2 rounded" style="background: #1E293B;">
+                            <span class="text-secondary small d-block">Estilo de Juego:</span>
+                            <span class="fw-bold text-info" style="font-size: 13px;">@bot.PlayStyle</span>
+                        </div>
+
+                        <!-- Descripción de capacidades individuales -->
+                        <p class="text-secondary small mb-3" style="font-size: 12px; min-height: 48px;">
+                            @bot.Description
+                        </p>
+
+                        <!-- Estadísticas -->
+                        <div class="row g-1 text-center mb-3">
+                            <div class="col-4">
+                                <div class="p-2 rounded bg-dark border border-secondary">
+                                    <div class="text-secondary" style="font-size: 11px;">Partidas</div>
+                                    <div class="fw-bold text-white">@bot.MatchesPlayed</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 rounded bg-dark border border-secondary">
+                                    <div class="text-secondary" style="font-size: 11px;">Victorias</div>
+                                    <div class="fw-bold text-success">@bot.Wins</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 rounded bg-dark border border-secondary">
+                                    <div class="text-secondary" style="font-size: 11px;">Win Rate</div>
+                                    <div class="fw-bold text-warning">@bot.WinRate%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div>
+                        <div class="d-grid gap-2">
+                            <!-- Botón Poner a Jugar -->
+                            <button type="button" class="btn btn-gold fw-bold" data-bs-toggle="modal" data-bs-target="#modalPlay_@bot.Id" @(bot.IsEnabled ? "" : "disabled")>
+                                <i class="fa-solid fa-gamepad me-1"></i> Poner a Jugar con Usuario
+                            </button>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
+                            <!-- Botón Editar Nombre y Capacidades -->
+                            <button type="button" class="btn btn-secondary-custom btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#modalEdit_@bot.Id">
+                                <i class="fa-solid fa-pen-to-square text-warning me-1"></i> Editar Bot
+                            </button>
+
+                            <!-- Toggle Activar / Desactivar -->
+                            <form method="post" asp-page-handler="ToggleStatus" class="d-inline">
+                                <input type="hidden" name="botId" value="@bot.Id" />
+                                <button type="submit" class="btn btn-sm @(bot.IsEnabled ? "btn-outline-danger" : "btn-outline-success")" title="@(bot.IsEnabled ? "Desactivar Bot" : "Activar Bot")">
+                                    <i class="fa-solid fa-power-off me-1"></i> @(bot.IsEnabled ? "Desactivar" : "Activar")
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL PONER A JUGAR -->
+        <div class="modal fade text-start" id="modalPlay_@bot.Id" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content card-custom text-white">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title">
+                            <span class="me-2">@bot.AvatarEmoji</span> Asignar Partida: <strong class="text-warning">@bot.Name</strong>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="post" asp-page-handler="CreateMatch">
+                        <input type="hidden" name="botId" value="@bot.Id" />
+                        <div class="modal-body">
+                            <div class="alert alert-info py-2 small bg-opacity-10 bg-info border border-info text-info">
+                                <i class="fa-solid fa-circle-info me-1"></i>
+                                El bot jugará automáticamente cada turno contra el usuario seleccionado utilizando su nivel de <strong>@bot.SkillLevelName</strong>.
+                            </div>
+
+                            <!-- Seleccionar Usuario -->
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small fw-bold">Usuario Rival con quien Jugará:</label>
+                                <select name="targetUserId" class="form-select bg-dark border-secondary text-white" required>
+                                    @if (!Model.RealUsers.Any())
+                                    {
+                                        <option value="" disabled selected>No hay usuarios registrados disponibles</option>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var user in Model.RealUsers)
+                                        {
+                                            <option value="@user.Id">
+                                                @@@user.Username — @user.DisplayName (Saldo: $@user.Balance.ToString("N0") COP)
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <!-- Seleccionar Juego -->
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small fw-bold">Juego:</label>
+                                <select name="gameId" class="form-select bg-dark border-secondary text-white" required>
+                                    <option value="chess" selected="@(bot.FavoriteGame.Contains("Ajedrez"))">♟️ Ajedrez Competitivo</option>
+                                    <option value="checkers" selected="@(bot.FavoriteGame.Contains("Damas"))">🔴 Damas Clásicas</option>
+                                    <option value="parchis" selected="@(bot.FavoriteGame.Contains("Parchís"))">🎲 Parchís / Parqués Clásico</option>
+                                </select>
+                            </div>
+
+                            <!-- Monto de Apuesta -->
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small fw-bold">Monto de la Partida ($ COP):</label>
+                                <input type="number" step="100" name="betAmount" value="1000" class="form-control bg-dark border-secondary text-white" min="0" required />
+                                <div class="form-text text-muted" style="font-size: 11px;">Ingresa 0 para partida de práctica o el valor deseado (ej: 1000).</div>
+                            </div>
+
+                            <!-- Quién mueve primero -->
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small fw-bold">Turno Inicial:</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="botStartsFirst" id="botFirst_@bot.Id" value="true" checked>
+                                    <label class="form-check-label text-white small" for="botFirst_@bot.Id">
+                                        El Bot mueve primero (Blancas / Fichas Rojas)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="botStartsFirst" id="userFirst_@bot.Id" value="false">
+                                    <label class="form-check-label text-white small" for="userFirst_@bot.Id">
+                                        El Usuario mueve primero (Blancas / Fichas Rojas)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-gold fw-bold">
+                                <i class="fa-solid fa-play me-1"></i> Iniciar Partida Ahora
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL EDITAR BOT -->
+        <div class="modal fade text-start" id="modalEdit_@bot.Id" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content card-custom text-white">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title">
+                            <i class="fa-solid fa-pen-to-square text-warning me-2"></i> Configurar Bot: @bot.Name
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="post" asp-page-handler="UpdateBot">
+                        <input type="hidden" name="botId" value="@bot.Id" />
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small fw-bold">Nombre del Bot (Personalizable):</label>
+                                <input type="text" name="name" value="@bot.Name" class="form-control bg-dark border-secondary text-white" required />
+                                <div class="form-text text-muted" style="font-size: 11px;">Ponle el nombre que desees a este bot.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="isEnabled" value="true" id="chkActive_@bot.Id" @(bot.IsEnabled ? "checked" : "")>
+                                    <label class="form-check-label text-white small fw-bold" for="chkActive_@bot.Id">
+                                        Bot Activo y disponible para jugar
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small fw-bold">Nivel de Capacidad / Dificultad:</label>
+                                <select name="skillLevel" class="form-select bg-dark border-secondary text-white">
+                                    <option value="GranMaestro" selected="@(bot.SkillLevel == KitoGame.Shared.Models.BotSkillLevel.GranMaestro)">Gran Maestro Supremo (Nivel 5 - Capacidad Máxima)</option>
+                                    <option value="Maestro" selected="@(bot.SkillLevel == KitoGame.Shared.Models.BotSkillLevel.Maestro)">Maestro Táctico (Nivel 4)</option>
+                                    <option value="Avanzado" selected="@(bot.SkillLevel == KitoGame.Shared.Models.BotSkillLevel.Avanzado)">Avanzado (Nivel 3)</option>
+                                    <option value="Intermedio" selected="@(bot.SkillLevel == KitoGame.Shared.Models.BotSkillLevel.Intermedio)">Intermedio (Nivel 2)</option>
+                                    <option value="Principiante" selected="@(bot.SkillLevel == KitoGame.Shared.Models.BotSkillLevel.Principiante)">Principiante (Nivel 1)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small fw-bold">Estilo de Juego:</label>
+                                <input type="text" name="playStyle" value="@bot.PlayStyle" class="form-control bg-dark border-secondary text-white" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small fw-bold">Especialidad Favorita:</label>
+                                <select name="favoriteGame" class="form-select bg-dark border-secondary text-white">
+                                    <option value="Ajedrez Competitivo" selected="@(bot.FavoriteGame == "Ajedrez Competitivo")">Ajedrez Competitivo</option>
+                                    <option value="Damas Clásicas" selected="@(bot.FavoriteGame == "Damas Clásicas")">Damas Clásicas</option>
+                                    <option value="Parchís Clásico" selected="@(bot.FavoriteGame == "Parchís Clásico")">Parchís Clásico</option>
+                                    <option value="Todos" selected="@(bot.FavoriteGame == "Todos")">Todos los Juegos</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success">Guardar Configuración</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+</div>

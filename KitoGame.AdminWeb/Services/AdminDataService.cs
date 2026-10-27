@@ -116,6 +116,7 @@ public class AdminDataService
     public IMongoCollection<PaymentRequest>? PaymentsCollection => _database?.GetCollection<PaymentRequest>("payment_requests");
     public IMongoCollection<WalletTransaction>? TransactionsCollection => _database?.GetCollection<WalletTransaction>("wallet_transactions");
     public IMongoCollection<MatchChallenge>? ChallengesCollection => _database?.GetCollection<MatchChallenge>("match_challenges");
+    public IMongoCollection<SystemBot>? BotsCollection => _database?.GetCollection<SystemBot>("system_bots");
     public IMongoCollection<SystemConfig>? ConfigCollection => _database?.GetCollection<SystemConfig>("system_config");
     public IMongoCollection<BsonDocument>? PlatformSettingsCollection => _database?.GetCollection<BsonDocument>("platform_settings");
     public IMongoCollection<AuditLog>? AuditLogsCollection => _database?.GetCollection<AuditLog>("audit_logs");
@@ -708,6 +709,285 @@ public class AdminDataService
         catch (Exception ex)
         {
             return (false, $"Falló la conexión con los nuevos parámetros: {ex.Message}");
+        }
+    }
+
+    public async Task<List<SystemBot>> GetBotsAsync()
+    {
+        if (BotsCollection == null) return new();
+        try
+        {
+            var bots = await BotsCollection.Find(FilterDefinition<SystemBot>.Empty).ToListAsync();
+            if (bots.Count < 5)
+            {
+                await SeedDefaultBotsAsync();
+                bots = await BotsCollection.Find(FilterDefinition<SystemBot>.Empty).ToListAsync();
+            }
+            return bots;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error obteniendo bots");
+            return new();
+        }
+    }
+
+    public async Task SeedDefaultBotsAsync()
+    {
+        if (BotsCollection == null) return;
+        var defaults = new List<SystemBot>
+        {
+            new SystemBot
+            {
+                Id = "bot_magnus",
+                Name = "Magnus Deep",
+                Username = "bot_magnus",
+                AvatarEmoji = "♟️",
+                ColorHex = "#2563EB",
+                IsEnabled = true,
+                SkillLevel = BotSkillLevel.GranMaestro,
+                PlayStyle = "Cálculo Posicional y Dominio Táctico Absoluto",
+                Description = "Gran Maestro de ajedrez y estrategia. Analiza variantes profundas y castiga cualquier descuido.",
+                FavoriteGame = "Ajedrez Competitivo"
+            },
+            new SystemBot
+            {
+                Id = "bot_atenea",
+                Name = "Atenea Táctica",
+                Username = "bot_atenea",
+                AvatarEmoji = "⚔️",
+                ColorHex = "#DB2777",
+                IsEnabled = true,
+                SkillLevel = BotSkillLevel.Maestro,
+                PlayStyle = "Capturas Asfixiantes y Ataque Veloz",
+                Description = "Especialista en saltos múltiples de damas y capturas agresivas en parchís. Asfixia al adversario.",
+                FavoriteGame = "Damas Clásicas"
+            },
+            new SystemBot
+            {
+                Id = "bot_titan",
+                Name = "Titán Implacable",
+                Username = "bot_titan",
+                AvatarEmoji = "🛡️",
+                ColorHex = "#D97706",
+                IsEnabled = true,
+                SkillLevel = BotSkillLevel.GranMaestro,
+                PlayStyle = "Presión Incesante y Defensa de Hierro",
+                Description = "Estructura defensiva inquebrantable. Bloquea las mejores rutas y contraataca con precisión.",
+                FavoriteGame = "Todos"
+            },
+            new SystemBot
+            {
+                Id = "bot_valeria",
+                Name = "Valeria Estratega",
+                Username = "bot_valeria",
+                AvatarEmoji = "👑",
+                ColorHex = "#059669",
+                IsEnabled = true,
+                SkillLevel = BotSkillLevel.Maestro,
+                PlayStyle = "Control Espacial y Salidas Estratégicas",
+                Description = "Maestra del Parchís / Parqués. Optimiza avances seguros, entradas a meta y control de casillas seguras.",
+                FavoriteGame = "Parchís Clásico"
+            },
+            new SystemBot
+            {
+                Id = "bot_mercurio",
+                Name = "Mercurio Relámpago",
+                Username = "bot_mercurio",
+                AvatarEmoji = "⚡",
+                ColorHex = "#7C3AED",
+                IsEnabled = true,
+                SkillLevel = BotSkillLevel.Avanzado,
+                PlayStyle = "Juego Impredecible y Dinámico",
+                Description = "Bot de alta velocidad y juego intuitivo. Ejecuta movimientos sorpresivos que descolocan al rival.",
+                FavoriteGame = "Todos"
+            }
+        };
+
+        foreach (var def in defaults)
+        {
+            var existing = await BotsCollection.Find(b => b.Id == def.Id).FirstOrDefaultAsync();
+            if (existing == null)
+            {
+                await BotsCollection.InsertOneAsync(def);
+            }
+
+            // Asegurar que también exista en colección de users para que no fallen referencias en la app móvil
+            if (UsersCollection != null)
+            {
+                var botUser = await UsersCollection.Find(u => u.Id == def.Id).FirstOrDefaultAsync();
+                if (botUser == null)
+                {
+                    var u = new User
+                    {
+                        Id = def.Id,
+                        Username = def.Username,
+                        FirstName = def.Name,
+                        LastName = "[BOT AI]",
+                        Balance = 1_000_000m,
+                        IsBot = true
+                    };
+                    await UsersCollection.InsertOneAsync(u);
+                }
+            }
+        }
+    }
+
+    public async Task<(bool Success, string Message)> UpdateBotAsync(
+        string botId,
+        string name,
+        bool isEnabled,
+        BotSkillLevel skillLevel,
+        string playStyle,
+        string favoriteGame,
+        string admin)
+    {
+        if (BotsCollection == null) return (false, "Sin conexión a base de datos.");
+        try
+        {
+            var bot = await BotsCollection.Find(b => b.Id == botId).FirstOrDefaultAsync();
+            if (bot == null) return (false, "Bot no encontrado.");
+
+            string oldName = bot.Name;
+            bot.Name = name.Trim();
+            bot.IsEnabled = isEnabled;
+            bot.SkillLevel = skillLevel;
+            bot.PlayStyle = playStyle.Trim();
+            bot.FavoriteGame = favoriteGame;
+
+            await BotsCollection.ReplaceOneAsync(b => b.Id == botId, bot);
+
+            // Sincronizar nombre en la colección de usuarios
+            if (UsersCollection != null)
+            {
+                var update = Builders<User>.Update.Set(u => u.FirstName, bot.Name);
+                await UsersCollection.UpdateOneAsync(u => u.Id == botId, update);
+            }
+
+            await LogAuditAsync(admin, "UpdateBot", $"Bot: {bot.Name}", $"Bot actualizado. Nombre: {oldName} -> {bot.Name}, Estado: {(bot.IsEnabled ? "Activo" : "Inactivo")}, Nivel: {bot.SkillLevelName}");
+            return (true, $"Bot '{bot.Name}' actualizado correctamente.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Error al actualizar bot: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Success, string Message)> ToggleBotStatusAsync(string botId, string admin)
+    {
+        if (BotsCollection == null) return (false, "Sin conexión a base de datos.");
+        try
+        {
+            var bot = await BotsCollection.Find(b => b.Id == botId).FirstOrDefaultAsync();
+            if (bot == null) return (false, "Bot no encontrado.");
+
+            bot.IsEnabled = !bot.IsEnabled;
+            await BotsCollection.ReplaceOneAsync(b => b.Id == botId, bot);
+
+            await LogAuditAsync(admin, "ToggleBot", $"Bot: {bot.Name}", $"Estado cambiado a {(bot.IsEnabled ? "Activo" : "Desactivado")}");
+            return (true, $"Bot '{bot.Name}' {(bot.IsEnabled ? "activado" : "desactivado")} exitosamente.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Error: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Success, string Message, string? ChallengeId)> CreateBotMatchAgainstUserAsync(
+        string botId,
+        string targetUserId,
+        string gameId,
+        decimal betAmount,
+        bool botStartsFirst,
+        string admin)
+    {
+        if (BotsCollection == null || UsersCollection == null || ChallengesCollection == null)
+            return (false, "Sin conexión a base de datos.", null);
+
+        try
+        {
+            var bot = await BotsCollection.Find(b => b.Id == botId).FirstOrDefaultAsync();
+            if (bot == null) return (false, "El bot seleccionado no existe.", null);
+            if (!bot.IsEnabled) return (false, $"El bot '{bot.Name}' está desactivado. Actívalo primero para asignarlo a jugar.", null);
+
+            var user = await UsersCollection.Find(u => u.Id == targetUserId).FirstOrDefaultAsync();
+            if (user == null) return (false, "El usuario rival no existe.", null);
+
+            string gameName = gameId switch
+            {
+                "chess" => "Ajedrez Competitivo",
+                "checkers" => "Damas Clásicas",
+                "parchis" => "Parchís Clásico",
+                _ => "Damas Clásicas"
+            };
+
+            string gameIcon = gameId switch
+            {
+                "chess" => "♟️",
+                "checkers" => "🔴",
+                "parchis" => "🎲",
+                _ => "🔴"
+            };
+
+            string creatorId, creatorUsername, creatorDisplayName;
+            string opponentId, opponentUsername, opponentDisplayName;
+
+            if (botStartsFirst)
+            {
+                creatorId = bot.Id;
+                creatorUsername = bot.Username;
+                creatorDisplayName = bot.Name;
+
+                opponentId = user.Id;
+                opponentUsername = user.Username;
+                opponentDisplayName = user.DisplayName;
+            }
+            else
+            {
+                creatorId = user.Id;
+                creatorUsername = user.Username;
+                creatorDisplayName = user.DisplayName;
+
+                opponentId = bot.Id;
+                opponentUsername = bot.Username;
+                opponentDisplayName = bot.Name;
+            }
+
+            var challenge = new MatchChallenge
+            {
+                Id = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+                GameId = gameId,
+                GameName = gameName,
+                GameIcon = gameIcon,
+                CreatorId = creatorId,
+                CreatorUsername = creatorUsername,
+                CreatorDisplayName = creatorDisplayName,
+                OpponentId = opponentId,
+                OpponentUsername = opponentUsername,
+                OpponentDisplayName = opponentDisplayName,
+                TargetOpponentUsername = opponentUsername,
+                BetAmount = Math.Max(0, betAmount),
+                Status = MatchStatus.Active,
+                IsPracticeBot = true,
+                IsBotMatch = true,
+                BotId = bot.Id,
+                BotSkillLevel = bot.SkillLevel.ToString(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await ChallengesCollection.InsertOneAsync(challenge);
+
+            bot.MatchesPlayed++;
+            bot.LastPlayedAt = DateTime.UtcNow;
+            await BotsCollection.ReplaceOneAsync(b => b.Id == bot.Id, bot);
+
+            await LogAuditAsync(admin, "CreateBotMatch", $"Match #{challenge.Id}", $"Partida asignada: Bot '{bot.Name}' vs @{user.Username} en {gameName} (Apuesta: ${betAmount:N0} COP)");
+
+            return (true, $"¡Partida #{challenge.Id} creada! El bot '{bot.Name}' jugará contra @{user.Username} en {gameName}.", challenge.Id);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Error al crear partida de bot: {ex.Message}", null);
         }
     }
 

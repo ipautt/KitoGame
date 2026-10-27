@@ -22,12 +22,14 @@ public class MatchChallenge
 
     public string CreatorId { get; set; } = string.Empty;
     public string CreatorUsername { get; set; } = string.Empty;
+    public string CreatorDisplayName { get; set; } = string.Empty;
 
     public string? TargetOpponentId { get; set; }
     public string? TargetOpponentUsername { get; set; }
 
     public string? OpponentId { get; set; }
     public string? OpponentUsername { get; set; }
+    public string? OpponentDisplayName { get; set; }
 
     public decimal BetAmount { get; set; }
     public decimal TotalPot => BetAmount * 2;
@@ -37,6 +39,9 @@ public class MatchChallenge
 
     public MatchStatus Status { get; set; } = MatchStatus.WaitingForOpponent;
     public bool IsPracticeBot { get; set; }
+    public bool IsBotMatch { get; set; }
+    public string? BotId { get; set; }
+    public string? BotSkillLevel { get; set; }
     public List<string> SerializedMoves { get; set; } = new();
     public List<MatchChatMessage> ChatMessages { get; set; } = new();
     public string? WinnerUserId { get; set; }

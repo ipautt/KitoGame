@@ -40,6 +40,9 @@ public class MatchChallenge
     public decimal NetPrizePaid { get; set; }
 
     public bool IsPracticeBot { get; set; }
+    public bool IsBotMatch { get; set; }
+    public string? BotId { get; set; }
+    public string? BotSkillLevel { get; set; }
     public List<string> SerializedMoves { get; set; } = new();
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

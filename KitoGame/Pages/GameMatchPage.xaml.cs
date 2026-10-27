@@ -394,7 +394,7 @@ public partial class GameMatchPage : ContentPage
         {
             UpdatePlayerRolesAndHeaders();
 
-            if (_challenge.IsPracticeBot && !_engine.IsGameOver && _engine.CurrentTurn == PlayerSide.Player2)
+            if (IsBotMatch() && !_engine.IsGameOver && _engine.CurrentTurn == GetBotSide())
             {
                 await ExecutePracticeBotTurnAsync();
             }
@@ -412,16 +412,29 @@ public partial class GameMatchPage : ContentPage
         AnnouncePresenceAsync();
     }
 
+    private bool IsBotMatch()
+    {
+        if (_challenge == null) return false;
+        return _challenge.IsPracticeBot ||
+               _challenge.IsBotMatch ||
+               (!string.IsNullOrEmpty(_challenge.CreatorId) && _challenge.CreatorId.StartsWith("bot_")) ||
+               (!string.IsNullOrEmpty(_challenge.OpponentId) && _challenge.OpponentId.StartsWith("bot_"));
+    }
+
+    private PlayerSide GetBotSide()
+    {
+        if (_challenge == null) return PlayerSide.None;
+        if (!string.IsNullOrEmpty(_challenge.CreatorId) && _challenge.CreatorId.StartsWith("bot_")) return PlayerSide.Player1;
+        if (!string.IsNullOrEmpty(_challenge.OpponentId) && _challenge.OpponentId.StartsWith("bot_")) return PlayerSide.Player2;
+        return _mySide == PlayerSide.Player1 ? PlayerSide.Player2 : PlayerSide.Player1;
+    }
+
     private void UpdatePlayerRolesAndHeaders()
     {
         if (_challenge == null) return;
 
         string? myUserId = _appState.CurrentUser?.Id;
-        if (_challenge.IsPracticeBot || myUserId == _challenge.CreatorId)
-        {
-            _mySide = PlayerSide.Player1;
-        }
-        else if (myUserId == _challenge.OpponentId)
+        if (myUserId == _challenge.OpponentId)
         {
             _mySide = PlayerSide.Player2;
         }
@@ -651,7 +664,7 @@ public partial class GameMatchPage : ContentPage
             pe.TryMakeAutoMove();
             RefreshMatchUI();
 
-            if (_challenge.IsPracticeBot && _engine.CurrentTurn == PlayerSide.Player2 && !_engine.IsGameOver)
+            if (IsBotMatch() && _engine.CurrentTurn == GetBotSide() && !_engine.IsGameOver)
             {
                 await ExecutePracticeBotTurnAsync();
             }
@@ -736,7 +749,7 @@ public partial class GameMatchPage : ContentPage
             RefreshMatchUI();
 
             // Solo si es modo práctica contra el Bot, el Bot responde automáticamente
-            if (_challenge.IsPracticeBot && _engine.CurrentTurn == PlayerSide.Player2 && !_engine.IsGameOver)
+            if (IsBotMatch() && _engine.CurrentTurn == GetBotSide() && !_engine.IsGameOver)
             {
                 await ExecutePracticeBotTurnAsync();
             }
@@ -791,11 +804,23 @@ public partial class GameMatchPage : ContentPage
         _isWaitingForBot = true;
         RefreshMatchUI();
 
-        await Task.Delay(550);
+        await Task.Delay(600);
 
         _engine.TryMakeAutoMove();
         _isWaitingForBot = false;
-        LblHelperHint.Text = "El Bot movió (casillas azules). Es tu turno.";
+
+        // Si la jugada fue registrada en el motor, sincronizar con la nube
+        if (_challenge != null && _engine.LastMoveFrom.HasValue && _engine.LastMoveTo.HasValue)
+        {
+            _appliedMoveCount++;
+            await _appState.RecordMoveAndSyncAsync(_challenge.Id, _engine.LastMoveFrom.Value, _engine.LastMoveTo.Value);
+        }
+
+        string botName = GetBotSide() == PlayerSide.Player1
+            ? (string.IsNullOrWhiteSpace(_challenge?.CreatorDisplayName) ? "El Bot" : _challenge.CreatorDisplayName)
+            : (string.IsNullOrWhiteSpace(_challenge?.OpponentDisplayName) ? "El Bot" : _challenge.OpponentDisplayName);
+
+        LblHelperHint.Text = $"{botName} movió (casillas azules). Es tu turno.";
         RefreshMatchUI();
 
         if (_engine.IsGameOver)

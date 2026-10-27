@@ -25,6 +25,7 @@ public class User
     public decimal Balance { get; set; }
     public decimal LockedBalance { get; set; }
     public bool IsAdmin { get; set; }
+    public bool IsBot { get; set; } = false;
     public bool IsBanned { get; set; } = false;
     public string? BanReason { get; set; }
     public int Wins { get; set; }
