@@ -367,7 +367,7 @@ public class AdminDataService
             var user = await GetUserByIdAsync(req.UserId);
             if (user != null)
             {
-                var update = Builders<User>.Update.Inc(u => u.Balance, req.Amount);
+                var update = Builders<User>.Update.Set(u => u.Balance, user.Balance + req.Amount);
                 await UsersCollection.UpdateOneAsync(u => u.Id == user.Id, update);
 
                 if (TransactionsCollection != null)
@@ -503,17 +503,34 @@ public class AdminDataService
             // Si se solicita reembolsar y la partida estaba en espera o activa
             if (refundBet && match.BetAmount > 0 && UsersCollection != null)
             {
-                if (!string.IsNullOrEmpty(match.CreatorId))
+                try
                 {
-                    await UsersCollection.UpdateOneAsync(
-                        u => u.Id == match.CreatorId,
-                        Builders<User>.Update.Inc(u => u.Balance, match.BetAmount));
+                    if (!string.IsNullOrEmpty(match.CreatorId))
+                    {
+                        var creator = await GetUserByIdAsync(match.CreatorId);
+                        if (creator != null)
+                        {
+                            var newBal = creator.Balance + match.BetAmount;
+                            await UsersCollection.UpdateOneAsync(
+                                u => u.Id == creator.Id,
+                                Builders<User>.Update.Set(u => u.Balance, newBal));
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(match.OpponentId) && match.Status == MatchStatus.Active)
+                    {
+                        var opponent = await GetUserByIdAsync(match.OpponentId);
+                        if (opponent != null)
+                        {
+                            var newBal = opponent.Balance + match.BetAmount;
+                            await UsersCollection.UpdateOneAsync(
+                                u => u.Id == opponent.Id,
+                                Builders<User>.Update.Set(u => u.Balance, newBal));
+                        }
+                    }
                 }
-                if (!string.IsNullOrEmpty(match.OpponentId) && match.Status == MatchStatus.Active)
+                catch (Exception exRefund)
                 {
-                    await UsersCollection.UpdateOneAsync(
-                        u => u.Id == match.OpponentId,
-                        Builders<User>.Update.Inc(u => u.Balance, match.BetAmount));
+                    _logger.LogWarning("Advertencia al procesar reembolso de partida #{Id}: {Msg}", match.Id, exRefund.Message);
                 }
             }
 
@@ -573,9 +590,18 @@ public class AdminDataService
                 {
                     if (!string.IsNullOrEmpty(m.CreatorId))
                     {
-                        await UsersCollection.UpdateOneAsync(
-                            u => u.Id == m.CreatorId,
-                            Builders<User>.Update.Inc(u => u.Balance, m.BetAmount));
+                        try
+                        {
+                            var creator = await GetUserByIdAsync(m.CreatorId);
+                            if (creator != null)
+                            {
+                                var newBal = creator.Balance + m.BetAmount;
+                                await UsersCollection.UpdateOneAsync(
+                                    u => u.Id == creator.Id,
+                                    Builders<User>.Update.Set(u => u.Balance, newBal));
+                            }
+                        }
+                        catch { }
                     }
                 }
             }
