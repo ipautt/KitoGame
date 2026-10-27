@@ -240,7 +240,7 @@ public class AdminDataService
         }
     }
 
-    public async Task<(bool Success, string Message)> AdjustUserBalanceAsync(string userId, decimal amountDelta, string reason, string admin)
+    public async Task<(bool Success, string Message)> AdjustUserBalanceAsync(string userId, decimal amountDelta, string reason, string admin, bool isExactSet = false)
     {
         if (UsersCollection == null) return (false, "Sin conexión a la base de datos.");
 
@@ -250,9 +250,13 @@ public class AdminDataService
             if (user == null) return (false, "Usuario no encontrado.");
 
             decimal oldBalance = user.Balance;
-            decimal newBalance = Math.Max(0, oldBalance + amountDelta);
+            decimal newBalance = isExactSet ? Math.Max(0, amountDelta) : Math.Max(0, oldBalance + amountDelta);
+            decimal deltaForTx = isExactSet ? (newBalance - oldBalance) : amountDelta;
 
-            var update = Builders<User>.Update.Set(u => u.Balance, newBalance);
+            var update = isExactSet
+                ? Builders<User>.Update.Set(u => u.Balance, newBalance).Set(u => u.LockedBalance, 0m)
+                : Builders<User>.Update.Set(u => u.Balance, newBalance);
+
             await UsersCollection.UpdateOneAsync(u => u.Id == userId, update);
 
             // Registrar transacción en billetera
@@ -262,7 +266,7 @@ public class AdminDataService
                 {
                     UserId = user.Id,
                     Username = user.Username,
-                    Amount = amountDelta,
+                    Amount = deltaForTx,
                     Type = TransactionType.AdminAdjustment,
                     Description = $"Ajuste administrativo por @{admin}: {reason}"
                 };
@@ -270,7 +274,7 @@ public class AdminDataService
             }
 
             await LogAuditAsync(admin, "AdjustBalance", $"User: @{user.Username}", $"Saldo modificado de ${oldBalance:N0} a ${newBalance:N0} COP. Motivo: {reason}");
-            return (true, $"Saldo ajustado a ${newBalance:N0} COP.");
+            return (true, $"Saldo de @{user.Username} ajustado a ${newBalance:N0} COP.");
         }
         catch (Exception ex)
         {
@@ -492,7 +496,7 @@ public class AdminDataService
         }
     }
 
-    public async Task<(bool Success, string Message)> DeleteChallengeAsync(string challengeId, bool refundBet, string admin)
+    public async Task<(bool Success, string Message)> DeleteChallengeAsync(string challengeId, string admin)
     {
         if (ChallengesCollection == null) return (false, "Sin conexión a la base de datos.");
         try
@@ -509,45 +513,28 @@ public class AdminDataService
 
             var match = await ChallengesCollection.Find(idFilter).FirstOrDefaultAsync();
 
-            // Si se solicita reembolsar y se encontró la partida con apuesta
-            if (match != null && refundBet && match.BetAmount > 0 && UsersCollection != null)
+            // Si el creador tenía saldo retenido/en custodia (LockedBalance), limpiarlo sin alterar el saldo disponible
+            if (match != null && UsersCollection != null && !string.IsNullOrEmpty(match.CreatorId))
             {
                 try
                 {
-                    if (!string.IsNullOrEmpty(match.CreatorId))
+                    var creator = await GetUserByIdAsync(match.CreatorId);
+                    if (creator != null && creator.LockedBalance > 0)
                     {
-                        var creator = await GetUserByIdAsync(match.CreatorId);
-                        if (creator != null)
-                        {
-                            var newBal = creator.Balance + match.BetAmount;
-                            await UsersCollection.UpdateOneAsync(
-                                u => u.Id == creator.Id,
-                                Builders<User>.Update.Set(u => u.Balance, newBal));
-                        }
-                    }
-                    if (!string.IsNullOrEmpty(match.OpponentId) && (int)match.Status == 1) // En Curso
-                    {
-                        var opponent = await GetUserByIdAsync(match.OpponentId);
-                        if (opponent != null)
-                        {
-                            var newBal = opponent.Balance + match.BetAmount;
-                            await UsersCollection.UpdateOneAsync(
-                                u => u.Id == opponent.Id,
-                                Builders<User>.Update.Set(u => u.Balance, newBal));
-                        }
+                        var newLocked = Math.Max(0, creator.LockedBalance - match.BetAmount);
+                        await UsersCollection.UpdateOneAsync(
+                            u => u.Id == creator.Id,
+                            Builders<User>.Update.Set(u => u.LockedBalance, newLocked));
                     }
                 }
-                catch (Exception exRefund)
-                {
-                    _logger.LogWarning("Advertencia al procesar reembolso de partida #{Id}: {Msg}", challengeId, exRefund.Message);
-                }
+                catch { }
             }
 
-            // Eliminar la partida de la colección
+            // Eliminar la partida de la colección sin sumar saldo al usuario
             var res = await ChallengesCollection.DeleteOneAsync(idFilter);
             if (res.DeletedCount > 0)
             {
-                await LogAuditAsync(admin, "DeleteMatch", $"Match #{challengeId}", $"Partida #{challengeId} eliminada por el administrador.");
+                await LogAuditAsync(admin, "DeleteMatch", $"Match #{challengeId}", $"Partida #{challengeId} eliminada por el administrador sin alterar saldos.");
                 return (true, $"Partida #{challengeId} eliminada correctamente.");
             }
 
@@ -560,7 +547,7 @@ public class AdminDataService
         }
     }
 
-    public async Task<(bool Success, string Message, int DeletedCount)> PurgeTestChallengesAsync(string mode, bool refundWaiting, string admin)
+    public async Task<(bool Success, string Message, int DeletedCount)> PurgeTestChallengesAsync(string mode, string admin)
     {
         if (ChallengesCollection == null) return (false, "Sin conexión a la base de datos.", 0);
         try
@@ -601,22 +588,22 @@ public class AdminDataService
                 return (true, "No se encontraron partidas para eliminar con el criterio seleccionado.", 0);
             }
 
-            // Reembolsos seguros
-            if (refundWaiting && UsersCollection != null)
+            // Si hay partidas en espera eliminadas, resetear el LockedBalance residual sin alterar el saldo disponible
+            if (UsersCollection != null)
             {
-                foreach (var m in matchesToDelete.Where(m => (int)m.Status == 0 && m.BetAmount > 0))
+                foreach (var m in matchesToDelete.Where(m => (int)m.Status == 0))
                 {
                     if (!string.IsNullOrEmpty(m.CreatorId))
                     {
                         try
                         {
                             var creator = await GetUserByIdAsync(m.CreatorId);
-                            if (creator != null)
+                            if (creator != null && creator.LockedBalance > 0)
                             {
-                                var newBal = creator.Balance + m.BetAmount;
+                                var newLocked = Math.Max(0, creator.LockedBalance - m.BetAmount);
                                 await UsersCollection.UpdateOneAsync(
                                     u => u.Id == creator.Id,
-                                    Builders<User>.Update.Set(u => u.Balance, newBal));
+                                    Builders<User>.Update.Set(u => u.LockedBalance, newLocked));
                             }
                         }
                         catch { }
@@ -627,7 +614,7 @@ public class AdminDataService
             var deleteRes = await ChallengesCollection.DeleteManyAsync(filter);
             int count = (int)deleteRes.DeletedCount;
 
-            await LogAuditAsync(admin, "PurgeMatches", $"Criterio: {mode}", $"Se eliminaron {count} partidas masivamente desde Backoffice. Reembolso: {(refundWaiting ? "Sí" : "No")}.");
+            await LogAuditAsync(admin, "PurgeMatches", $"Criterio: {mode}", $"Se eliminaron {count} partidas masivamente desde Backoffice sin alterar saldos.");
             return (true, $"¡Se eliminaron exitosamente {count} partidas de la base de datos!", count);
         }
         catch (Exception ex)

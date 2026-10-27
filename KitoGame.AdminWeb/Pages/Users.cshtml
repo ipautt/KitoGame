@@ -183,8 +183,14 @@
                                                     <label class="form-label small text-secondary">Saldo Actual: <strong class="text-success">$@user.Balance.ToString("N0") COP</strong></label>
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label class="form-label small text-secondary">Monto a Sumar o Restar (ej: 10000 o -5000)</label>
-                                                    <input type="number" step="1000" name="amountDelta" class="form-control bg-dark border-secondary text-white" placeholder="Ej: 5000" required />
+                                                    <div class="form-check form-switch mb-2">
+                                                        <input class="form-check-input" type="checkbox" name="isExactSet" value="true" id="chkExact_@user.Id">
+                                                        <label class="form-check-label small text-warning fw-bold" for="chkExact_@user.Id">
+                                                            <i class="fa-solid fa-crosshairs me-1"></i> Fijar Saldo Exacto (Reemplazar saldo en vez de sumar/restar)
+                                                        </label>
+                                                    </div>
+                                                    <label class="form-label small text-secondary">Monto (ej: 1000 para fijar en $1.000 COP, o -5000 para restar)</label>
+                                                    <input type="number" step="100" name="amountDelta" class="form-control bg-dark border-secondary text-white" placeholder="Ej: 1000" required />
                                                 </div>
                                                 <div class="mb-3">
                                                     <label class="form-label small text-secondary">Motivo del Ajuste (Auditoría)</label>

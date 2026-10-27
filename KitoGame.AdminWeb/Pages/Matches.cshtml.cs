@@ -53,10 +53,10 @@ public class MatchesModel : PageModel
         catch { }
     }
 
-    public async Task<IActionResult> OnPostDeleteMatchAsync(string challengeId, bool refundBet = true)
+    public async Task<IActionResult> OnPostDeleteMatchAsync(string challengeId)
     {
         string admin = User.Identity?.Name ?? "Admin";
-        var res = await _dataService.DeleteChallengeAsync(challengeId, refundBet, admin);
+        var res = await _dataService.DeleteChallengeAsync(challengeId, admin);
         if (res.Success)
         {
             TempData["SuccessMessage"] = res.Message;
@@ -71,10 +71,10 @@ public class MatchesModel : PageModel
         return RedirectToPage(new { status = StatusFilter, search = Search });
     }
 
-    public async Task<IActionResult> OnPostPurgeMatchesAsync(string purgeMode, bool refundWaiting = true)
+    public async Task<IActionResult> OnPostPurgeMatchesAsync(string purgeMode)
     {
         string admin = User.Identity?.Name ?? "Admin";
-        var res = await _dataService.PurgeTestChallengesAsync(purgeMode, refundWaiting, admin);
+        var res = await _dataService.PurgeTestChallengesAsync(purgeMode, admin);
         if (res.Success)
         {
             TempData["SuccessMessage"] = res.Message;

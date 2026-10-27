@@ -40,10 +40,10 @@ public class UsersModel : PageModel
         return RedirectToPage(new { search = Search, onlyBanned = OnlyBanned });
     }
 
-    public async Task<IActionResult> OnPostAdjustBalanceAsync(string userId, decimal amountDelta, string reason)
+    public async Task<IActionResult> OnPostAdjustBalanceAsync(string userId, decimal amountDelta, string reason, bool isExactSet = false)
     {
         string admin = User.Identity?.Name ?? "admin";
-        var res = await _dataService.AdjustUserBalanceAsync(userId, amountDelta, reason, admin);
+        var res = await _dataService.AdjustUserBalanceAsync(userId, amountDelta, reason, admin, isExactSet);
 
         if (res.Success)
             TempData["SuccessMessage"] = res.Message;

@@ -1328,13 +1328,8 @@ public class AppStateService
                     }
                 }
 
-                foreach (var lc in _db.MatchChallengesTable.ToList())
-                {
-                    if (!remoteChallenges.Any(r => r.Id == lc.Id))
-                    {
-                        await MongoDb.UpsertChallengeAsync(lc);
-                    }
-                }
+                // Si una partida fue eliminada en MongoDB Atlas (por el administrador), retirarla del almacenamiento local
+                _db.MatchChallengesTable.RemoveAll(lc => !remoteChallenges.Any(r => r.Id == lc.Id));
             }
 
             // 4. Notificaciones en tiempo real desde otros teléfonos
@@ -1411,12 +1406,6 @@ public class AppStateService
             }
 
             await MongoDb.UpsertSettingsAsync(_db.CommissionPercentage, _db.PlatformTreasuryBalance);
-
-            var recentChallenge = _db.MatchChallengesTable.OrderByDescending(c => c.CreatedAt).FirstOrDefault();
-            if (recentChallenge != null)
-            {
-                await MongoDb.UpsertChallengeAsync(recentChallenge);
-            }
 
             var recentPayment = _db.PaymentRequestsTable.OrderByDescending(p => p.CreatedAt).FirstOrDefault();
             if (recentPayment != null)

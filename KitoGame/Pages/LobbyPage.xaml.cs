@@ -659,16 +659,28 @@ public partial class LobbyPage : ContentPage
     private void BuildCompletedChallengesList()
     {
         CompletedChallengesContainer.Children.Clear();
+        var myUser = _appState.CurrentUser;
+        bool isAdmin = myUser?.IsAdmin == true;
+        string? myUserId = myUser?.Id;
+
+        LblSection4History.Text = isAdmin 
+            ? "📜 5. HISTORIAL DE PARTIDAS (GLOBAL ADMIN)" 
+            : "📜 5. MI HISTORIAL DE PARTIDAS FINALIZADAS";
+
+        // Filtro de privacidad: solo partidas donde el usuario participó (como creador o rival), excepto administradores
         var finished = _appState.Challenges
             .Where(c => c.Status == MatchStatus.Completed || c.Status == MatchStatus.Draw)
-            .Take(8)
+            .Where(c => isAdmin || (!string.IsNullOrEmpty(myUserId) && (c.CreatorId == myUserId || c.OpponentId == myUserId)))
+            .Take(12)
             .ToList();
 
         if (finished.Count == 0)
         {
             CompletedChallengesContainer.Children.Add(new Label
             {
-                Text = "Aún no hay partidas finalizadas.",
+                Text = isAdmin 
+                    ? "Aún no hay partidas finalizadas en la plataforma." 
+                    : "Aún no tienes partidas finalizadas en tu cuenta.",
                 FontSize = 12,
                 TextColor = Color.FromArgb("#64748B")
             });
@@ -685,9 +697,17 @@ public partial class LobbyPage : ContentPage
                 Padding = 10
             };
 
-            string summary = ch.Status == MatchStatus.Draw
-                ? $"{ch.GameIcon} {GetLocalizedGameName(ch.GameId)} (#{ch.Id}): 🤝 Empate / Tablas"
-                : $"{ch.GameIcon} {GetLocalizedGameName(ch.GameId)} (#{ch.Id}): 🏆 Ganador: {ch.WinnerUsername} → +${ch.WinnerPrize:N0} COP";
+            string summary;
+            if (ch.Status == MatchStatus.Draw)
+            {
+                summary = $"{ch.GameIcon} {GetLocalizedGameName(ch.GameId)} (#{ch.Id}): 🤝 Empate / Tablas";
+            }
+            else
+            {
+                bool iWon = !string.IsNullOrEmpty(myUserId) && ch.WinnerUserId == myUserId;
+                string winTag = iWon ? "🎉 ¡Ganaste!" : $"🏆 Ganador: {ch.WinnerUsername}";
+                summary = $"{ch.GameIcon} {GetLocalizedGameName(ch.GameId)} (#{ch.Id}): {winTag} → +${ch.WinnerPrize:N0} COP";
+            }
 
             card.Content = new Label
             {

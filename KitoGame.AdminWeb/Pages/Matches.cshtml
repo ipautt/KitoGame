@@ -12,7 +12,6 @@
     <div class="d-flex gap-2 flex-wrap">
         <form method="post" asp-page-handler="PurgeMatches" class="d-inline" onsubmit="return confirm('⚠️ ATENCIÓN: ¿Confirmas eliminar TODAS las partidas de prueba (@Model.TotalCount) de la base de datos para empezar en limpio?');">
             <input type="hidden" name="purgeMode" value="all" />
-            <input type="hidden" name="refundWaiting" value="true" />
             <button type="submit" class="btn btn-danger fw-bold shadow-sm">
                 <i class="fa-solid fa-dumpster-fire me-1"></i> Vaciar Todas (@Model.TotalCount)
             </button>
@@ -150,7 +149,6 @@
                         <td class="text-end">
                             <form method="post" asp-page-handler="DeleteMatch" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar permanentemente la partida #@match.Id (@match.GameName)?');">
                                 <input type="hidden" name="challengeId" value="@match.Id" />
-                                <input type="hidden" name="refundBet" value="true" />
                                 <button type="submit" class="btn btn-sm btn-danger fw-bold">
                                     <i class="fa-solid fa-trash-can me-1"></i> Eliminar
                                 </button>
@@ -215,13 +213,6 @@
                             </label>
                         </div>
                     </div>
-
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" name="refundWaiting" value="true" id="chkPurgeRefund" checked>
-                        <label class="form-check-label small" for="chkPurgeRefund">
-                            Reembolsar saldo a creadores de partidas en espera antes de borrarlas.
-                        </label>
-                    </div>
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
@@ -233,3 +224,4 @@
         </div>
     </div>
 </div>
+
